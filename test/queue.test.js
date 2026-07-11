@@ -73,10 +73,17 @@ test("manuell opplåsing overstyrer gating", () => {
   assert.deepEqual(unlockedLessons(deck(), {}, settings), ["l1", "l2"]);
 });
 
-test("nye kort kommer fra tidligste åpne leksjon, i rekkefølge, begrenset av dagsgrense", () => {
+test("nye kort: rekkefølge, dagsgrense og aldri søsken i samme økt", () => {
   const s = buildSession({ deck: deck(), progress: {}, settings: { newPerDay: 2 }, now: NOW, newLimitUsedToday: 0, rng: noShuffle });
-  // l2 er låst, l1 har refs a, a/r, b → to første i forfatterrekkefølge
-  assert.deepEqual(s.newAvail.map(r => progressKey(r.deckId, r.cardId, r.rev)), ["d/a", "d/a/r"]);
+  // l2 er låst; a/r hoppes over fordi a alt er med i økten → a, b
+  assert.deepEqual(s.newAvail.map(r => progressKey(r.deckId, r.cardId, r.rev)), ["d/a", "d/b"]);
+});
+
+test("nytt speilkort hoppes over når originalen er due i samme økt", () => {
+  const progress = { "d/a": st({ due: NOW - DAY, stability: 3 }) };
+  const s = buildSession({ deck: deck(), progress, settings: { newPerDay: 10 }, now: NOW, newLimitUsedToday: 0, rng: noShuffle });
+  const keys = s.newAvail.map(r => progressKey(r.deckId, r.cardId, r.rev));
+  assert.ok(!keys.includes("d/a/r"), "a/r skal ikke være med når a er due");
 });
 
 test("brukt dagskvote reduserer nye", () => {

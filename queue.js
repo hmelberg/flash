@@ -73,14 +73,18 @@ export function buildSession({ deck, progress, settings, now, newLimitUsedToday 
   }
   due = shuffle([...byCard.values()].map(x => x.r), rng);
 
-  // Nye: fra tidligste åpne, uferdige leksjon, i rekkefølge
+  // Nye: fra tidligste åpne, uferdige leksjon, i rekkefølge.
+  // Søsken-regel gjelder også her: aldri kort + speilkort i samme økt.
+  const inSession = new Set(due.map(r => `${r.deckId}/${r.cardId}`));
   const limit = Math.max(0, (settings.newPerDay ?? 10) - newLimitUsedToday);
   const newAvail = [];
   for (const r of refs) {
     if (newAvail.length >= limit) break;
     if (!open.has(r.lessonId)) continue;
+    const base = `${r.deckId}/${r.cardId}`;
+    if (inSession.has(base)) { buried += 1; continue; }
     const st = progress[progressKey(r.deckId, r.cardId, r.rev)];
-    if (!st || st.due === 0) newAvail.push(r);
+    if (!st || st.due === 0) { newAvail.push(r); inSession.add(base); }
   }
 
   return { due, newAvail, counts: { due: due.length, new: newAvail.length, buried } };

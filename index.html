@@ -404,13 +404,532 @@ function noteFor(ref) {
   return store.get().meta.notes[progressKey(ref.deckId, ref.cardId, ref.rev)] || "";
 }
 
-/* ---- stubs som fylles i task 5–7 ---- */
-function viewBrowse() { app.innerHTML = `<p class="muted">Kommer …</p>`; }
-function viewStats() { app.innerHTML = `<p class="muted">Kommer …</p>`; }
-function viewSettings() { app.innerHTML = `<p class="muted">Kommer …</p>`; }
-function aiAvailable() { return false; }
-function explainCard() {}
-function maybeAutoSync() {}
+/* ========== bla ========== */
+function stateLabel(st) {
+  if (!st || st.due === 0) return "ny";
+  if (st.suspended) return "suspendert";
+  if (isLeech(st)) return "leech";
+  return isMature(st) ? "moden" : "ung";
+}
+
+function viewBrowse() {
+  const deckId = decodeURIComponent(location.hash.split("/")[1] || "");
+  const deck = store.get().decksCache[deckId];
+  if (!deck) {
+    const rows = decks().map(d =>
+      `<div class="deckrow"><a href="#browse/${encodeURIComponent(d.id)}"><strong>${esc(d.title)}</strong></a>
+       <span class="counts">${d.lessons.reduce((n, l) => n + l.cards.length, 0)} kort · ${d.lessons.length} leksjoner
+       ${d.own ? '· <span class="badge">eget</span>' : ""}</span></div>`).join("");
+    app.innerHTML = `<h1>Bla i tema</h1>${rows || '<p class="muted">Ingen tema.</p>'}
+      ${aiAvailable() ? `<button id="genbtn" class="primary" style="margin-top:1rem">✨ Generer kort med KI</button>` : ""}`;
+    const g = $("#genbtn"); if (g) g.onclick = () => generateDialog();
+    return;
+  }
+
+  const { progress, settings } = store.get();
+  const open = new Set(unlockedLessons(deck, progress, settings));
+  const lessonsHtml = deck.lessons.map(l => {
+    const refs = [];
+    for (const c of l.cards) { refs.push({ c, rev: false }); if (c.reverse) refs.push({ c, rev: true }); }
+    const learned = refs.filter(r => (progress[progressKey(deck.id, r.c.id, r.rev)]?.stability ?? 0) >= 7).length;
+    const rows = refs.map(r => {
+      const key = progressKey(deck.id, r.c.id, r.rev);
+      const st = progress[key];
+      const frontVal = r.rev ? r.c.back : r.c.front;
+      const label = stateLabel(st);
+      return `<tr><td>${contentHtml(frontVal)} ${r.rev ? '<span class="badge">omvendt</span>' : ""}</td>
+        <td><span class="badge ${label === "leech" ? "leech" : label === "ny" ? "new" : ""}">${label}</span></td>
+        <td>${st?.suspended ? `<button class="small" data-wake="${esc(key)}">vekk</button>` : ""}
+            ${st && isLeech(st) && aiAvailable() ? `<button class="small" data-rewrite="${esc(key)}">✨ omskriv</button>` : ""}</td></tr>`;
+    }).join("");
+    return `<div class="lesson"><h3>${open.has(l.id) ? "🔓" : "🔒"} ${esc(l.title)}
+        <span class="muted small">(${learned}/${refs.length} lært)</span>
+        ${!open.has(l.id) ? `<button class="small" data-unlock="${esc(l.id)}">lås opp</button>` : ""}</h3>
+      ${l.note ? `<p class="muted small">${esc(l.note)}</p>` : ""}
+      <table class="cardlist">${rows}</table></div>`;
+  }).join("");
+
+  app.innerHTML = `<p><a href="#browse">← alle tema</a></p><h1>${esc(deck.title)}</h1>
+    ${aiAvailable() ? `<button id="genbtn">✨ Generer flere kort</button>` : ""}
+    <button class="danger" id="rmdeck">Fjern tema fra appen</button>
+    ${lessonsHtml}`;
+  typeset(app);
+  app.querySelectorAll("[data-unlock]").forEach(b => b.onclick = () => {
+    store.patch(s => { s.settings.unlocked.push(`${deck.id}/${b.dataset.unlock}`); }); render();
+  });
+  app.querySelectorAll("[data-wake]").forEach(b => b.onclick = () => {
+    store.patch(s => { const st = s.progress[b.dataset.wake]; st.suspended = false; st.due = Date.now(); st.lapses = 0; });
+    render();
+  });
+  app.querySelectorAll("[data-rewrite]").forEach(b => b.onclick = () => rewriteDialog(deck, b.dataset.rewrite));
+  const g = $("#genbtn"); if (g) g.onclick = () => generateDialog(deck.id);
+  $("#rmdeck").onclick = () => {
+    if (!confirm(`Fjerne «${deck.title}»? Fremgangen beholdes.`)) return;
+    store.patch(s => { delete s.decksCache[deck.id]; });
+    location.hash = "#browse";
+  };
+}
+
+/* ========== statistikk ========== */
+function viewStats() {
+  const { progress } = store.get();
+  const now = Date.now();
+  let nNew = 0, nYoung = 0, nMature = 0, mOk = 0, mTot = 0;
+  const perDay = {};
+  for (const st of Object.values(progress)) {
+    if (st.due === 0) nNew++;
+    else if (st.suspended) { /* teller ikke */ }
+    else if (isMature(st)) nMature++;
+    else nYoung++;
+    for (const h of st.history) {
+      if (h.grade === "never") continue;
+      if (now - h.t <= 14 * DAY) perDay[todayKey(h.t)] = (perDay[todayKey(h.t)] || 0) + 1;
+      if (now - h.t <= 30 * DAY && isMature(st)) { mTot++; if (h.grade === "ok") mOk++; }
+    }
+  }
+  const retention = mTot ? Math.round(100 * mOk / mTot) : null;
+  const retMsg = retention == null ? "for få modne repetisjoner ennå"
+    : retention > 95 ? "svært høy — intervallene er kanskje for forsiktige"
+    : retention < 80 ? "lav — intervallene er kanskje for aggressive"
+    : "i det sunne området (80–95 %)";
+  const days = [...Array(14)].map((_, i) => todayKey(now - (13 - i) * DAY));
+  const max = Math.max(1, ...days.map(d => perDay[d] || 0));
+  const bars = days.map(d => {
+    const v = perDay[d] || 0;
+    return `<div class="bar" style="height:${Math.round(100 * v / max)}%" title="${d}: ${v}"><span>${v || ""}</span></div>`;
+  }).join("");
+
+  app.innerHTML = `<h1>Statistikk</h1>
+    <p><strong>Retensjon (modne kort, 30 d):</strong> ${retention == null ? "–" : retention + " %"}
+       <span class="muted small">— ${retMsg}</span></p>
+    <p>${nNew} nye · ${nYoung} unge · ${nMature} modne</p>
+    <h2>Repetisjoner siste 14 dager</h2>
+    <div class="bars">${bars}</div>`;
+}
+
+/* ========== innstillinger ========== */
+function viewSettings() {
+  const s = store.get().settings;
+  const last = store.get().meta.lastSync;
+  app.innerHTML = `<h1>Innstillinger</h1>
+    <h2>Læring</h2>
+    <label>Nye kort per dag</label><input id="s-new" type="number" min="0" max="100" value="${s.newPerDay}" style="max-width:6rem">
+    <label><input type="checkbox" id="s-tts" ${s.tts ? "checked" : ""} style="width:auto"> Opplesing (TTS) på</label>
+    <label><input type="checkbox" id="s-auto" ${s.autoplay ? "checked" : ""} style="width:auto"> Les opp automatisk ved snuing</label>
+    <h2>KI (valgfritt)</h2>
+    <p class="muted small">Nøkkelen lagres kun i denne nettleseren og sendes kun til Anthropic.</p>
+    <label>Anthropic API-nøkkel</label><input id="s-key" type="password" value="${esc(s.apiKey)}" placeholder="sk-ant-…">
+    <label>Modell</label><input id="s-model" value="${esc(s.model)}">
+    <h2>GitHub-synk (valgfritt)</h2>
+    <p class="muted small">Bruk en fine-grained PAT begrenset til ett repo (Contents: read/write). Lagres kun lokalt.</p>
+    <label>Repo (eier/navn)</label><input id="s-repo" value="${esc(s.ghRepo)}" placeholder="hansmelberg/flash-data">
+    <label>Personal Access Token</label><input id="s-pat" type="password" value="${esc(s.ghPat)}">
+    <label><input type="checkbox" id="s-autosync" ${s.autoSync ? "checked" : ""} style="width:auto"> Synk automatisk etter hver økt</label>
+    <p><button id="syncnow">Synk nå</button>
+       <span class="muted small">${last ? "sist synket " + new Date(last).toLocaleString("no") : "aldri synket"}</span></p>
+    <p id="syncstatus" class="small"></p>
+    <p style="margin-top:1rem"><button id="save" class="primary">Lagre innstillinger</button></p>
+    <h2>Backup</h2>
+    <p><button id="export">Eksporter alt (JSON)</button>
+       <button id="importbtn">Importer …</button>
+       <input type="file" id="importfile" accept=".json" class="hidden"></p>`;
+
+  $("#save").onclick = () => {
+    store.patch(d => {
+      d.settings.newPerDay = Math.max(0, +$("#s-new").value || 0);
+      d.settings.tts = $("#s-tts").checked;
+      d.settings.autoplay = $("#s-auto").checked;
+      d.settings.apiKey = $("#s-key").value.trim();
+      d.settings.model = $("#s-model").value.trim() || "claude-opus-4-8";
+      d.settings.ghRepo = $("#s-repo").value.trim();
+      d.settings.ghPat = $("#s-pat").value.trim();
+      d.settings.autoSync = $("#s-autosync").checked;
+    });
+    $("#syncstatus").textContent = "Lagret.";
+  };
+  $("#syncnow").onclick = () => syncNow($("#syncstatus"));
+  $("#export").onclick = () => {
+    const blob = new Blob([JSON.stringify(store.get(), null, 1)], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `flash-backup-${todayKey()}.json`;
+    a.click();
+  };
+  $("#importbtn").onclick = () => $("#importfile").click();
+  $("#importfile").onchange = async (e) => {
+    try {
+      const data = JSON.parse(await e.target.files[0].text());
+      if (!data.progress || !data.settings) throw new Error("ligner ikke på en flash-backup");
+      localStorage.setItem(KEY, JSON.stringify(data));
+      location.reload();
+    } catch (err) { $("#syncstatus").textContent = "Import feilet: " + err.message; }
+  };
+}
+
+/* ========== GitHub-synk ========== */
+const b64enc = (str) => {
+  const bytes = new TextEncoder().encode(str);
+  let bin = ""; for (const b of bytes) bin += String.fromCharCode(b);
+  return btoa(bin);
+};
+const b64dec = (b64) => {
+  const bin = atob(b64.replace(/\s/g, ""));
+  return new TextDecoder().decode(Uint8Array.from(bin, c => c.charCodeAt(0)));
+};
+
+function ghCfg() {
+  const { ghRepo, ghPat } = store.get().settings;
+  if (!ghRepo || !ghPat) throw new Error("Sett GitHub-repo og PAT i innstillinger først.");
+  return { ghRepo, ghPat };
+}
+async function ghFetch(path, opts = {}) {
+  const { ghRepo, ghPat } = ghCfg();
+  const r = await fetch(`https://api.github.com/repos/${ghRepo}/contents/${path}`, {
+    ...opts,
+    headers: { Authorization: `Bearer ${ghPat}`, Accept: "application/vnd.github+json", ...opts.headers },
+  });
+  if (r.status === 401) throw new Error("GitHub avviste PAT-en (401) — lag en ny.");
+  return r;
+}
+async function ghGet(path) {
+  const r = await ghFetch(path);
+  if (r.status === 404) return null;
+  if (!r.ok) throw new Error(`GitHub GET ${path}: HTTP ${r.status}`);
+  const j = await r.json();
+  return { json: JSON.parse(b64dec(j.content)), sha: j.sha };
+}
+async function ghPut(path, contentStr, sha) {
+  const body = { message: `flash sync ${new Date().toISOString()}`, content: b64enc(contentStr) };
+  if (sha) body.sha = sha;
+  const r = await ghFetch(path, { method: "PUT", body: JSON.stringify(body) });
+  if (!r.ok) { const e = new Error(`GitHub PUT ${path}: HTTP ${r.status}`); e.status = r.status; throw e; }
+}
+
+function mergedPayload(remote) {
+  const d = store.get();
+  const progress = { ...(remote?.progress || {}) };
+  for (const [k, st] of Object.entries(d.progress)) {
+    const r = progress[k];
+    if (!r || (st.lastReview || 0) >= (r.lastReview || 0)) progress[k] = st;
+  }
+  const notes = { ...(remote?.notes || {}), ...d.meta.notes };
+  const newUsedByDay = { ...(remote?.newUsedByDay || {}) };
+  for (const [day, n] of Object.entries(d.meta.newUsedByDay))
+    newUsedByDay[day] = Math.max(newUsedByDay[day] || 0, n);
+  return { progress, notes, newUsedByDay };
+}
+
+async function syncNow(statusEl, silent = false) {
+  const say = (m) => { if (statusEl) statusEl.textContent = m; };
+  try {
+    say("Synker …");
+    let attempt = 0;
+    while (true) {
+      const remote = await ghGet("progress.json");
+      const merged = mergedPayload(remote?.json);
+      try {
+        await ghPut("progress.json", JSON.stringify(merged), remote?.sha);
+      } catch (e) {
+        if ((e.status === 409 || e.status === 422) && attempt++ < 1) continue; // sha-konflikt: hent på nytt
+        throw e;
+      }
+      store.patch(s => {
+        s.progress = merged.progress;
+        s.meta.notes = merged.notes;
+        s.meta.newUsedByDay = merged.newUsedByDay;
+        s.meta.lastSync = Date.now();
+      });
+      break;
+    }
+    for (const deck of decks()) {
+      if (!deck.own) continue;
+      const path = `decks/${deck.id}.json`;
+      const remote = await ghGet(path);
+      await ghPut(path, JSON.stringify(deck, null, 1), remote?.sha);
+    }
+    say("Synket ✓");
+  } catch (e) {
+    say("Synk feilet: " + e.message);
+    if (!silent && !statusEl) alert("Synk feilet: " + e.message);
+  }
+}
+function maybeAutoSync() {
+  const s = store.get().settings;
+  if (s.autoSync && s.ghRepo && s.ghPat) syncNow(null, true);
+}
+
+/* ========== Claude-integrasjon ========== */
+function aiAvailable() { return !!store.get().settings.apiKey; }
+
+let sdkModule; // null = import feilet, bruk rå fetch
+async function getSdk() {
+  if (sdkModule !== undefined) return sdkModule;
+  try { sdkModule = (await import("https://esm.sh/@anthropic-ai/sdk")).default; }
+  catch { sdkModule = null; }
+  return sdkModule;
+}
+
+function aiError(e) {
+  const st = e?.status ?? e?.response?.status;
+  if (st === 401) return "API-nøkkelen ble avvist — sjekk innstillinger.";
+  if (st === 429) return "For mange forespørsler — vent litt og prøv igjen.";
+  return e.message || String(e);
+}
+
+// Ett kall som virker både med SDK og rå fetch. onText => streaming.
+async function aiMessage(body, { onText, signal } = {}) {
+  const { apiKey } = store.get().settings;
+  const Sdk = await getSdk();
+  if (Sdk) {
+    const client = new Sdk({ apiKey, dangerouslyAllowBrowser: true });
+    if (onText) {
+      const stream = client.messages.stream(body, { signal });
+      stream.on("text", onText);
+      return await stream.finalMessage();
+    }
+    return await client.messages.create(body, { signal });
+  }
+  // Rå fetch-fallback
+  const headers = {
+    "content-type": "application/json",
+    "x-api-key": apiKey,
+    "anthropic-version": "2023-06-01",
+    "anthropic-dangerous-direct-browser-access": "true",
+  };
+  const r = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST", headers, signal,
+    body: JSON.stringify(onText ? { ...body, stream: true } : body),
+  });
+  if (!r.ok) { const e = new Error(`HTTP ${r.status}`); e.status = r.status; throw e; }
+  if (!onText) return await r.json();
+  const reader = r.body.getReader();
+  const dec = new TextDecoder();
+  let buf = "", finalMsg = null, text = "";
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += dec.decode(value, { stream: true });
+    const lines = buf.split("\n"); buf = lines.pop();
+    for (const line of lines) {
+      if (!line.startsWith("data: ")) continue;
+      let ev; try { ev = JSON.parse(line.slice(6)); } catch { continue; }
+      if (ev.type === "content_block_delta" && ev.delta?.type === "text_delta") {
+        text += ev.delta.text; onText(ev.delta.text);
+      } else if (ev.type === "message_delta") {
+        finalMsg = { stop_reason: ev.delta?.stop_reason };
+      }
+    }
+  }
+  return { ...finalMsg, content: [{ type: "text", text }] };
+}
+
+function openDialog(html) {
+  const dlg = document.createElement("dialog");
+  dlg.innerHTML = html;
+  document.body.append(dlg);
+  dlg.addEventListener("close", () => dlg.remove());
+  dlg.showModal();
+  return dlg;
+}
+
+/* --- forklar mer --- */
+async function explainCard(ref) {
+  const box = $("#aibox");
+  if (!box) return;
+  box.classList.remove("hidden");
+  box.innerHTML = `<div class="ai-out" id="aitext"></div>
+    <div class="toolrow"><button id="aiabort">avbryt</button></div>`;
+  const out = $("#aitext");
+  const ctrl = new AbortController();
+  $("#aiabort").onclick = () => ctrl.abort();
+  const { card } = ref;
+  const deck = session.deck;
+  const s = store.get().settings;
+  try {
+    const resp = await aiMessage({
+      model: s.model, max_tokens: 1024,
+      system: "You are a concise, excellent tutor helping with flashcard study. Explain the card below: why the answer is what it is, memory hooks, common confusions, one or two extra examples. Match the learner's level. Maximum ~250 words. Use the same language as the card's back side unless context says otherwise. You may use $...$ for math.",
+      messages: [{ role: "user", content:
+        `Context: ${deck.explainContext || deck.title}\n` +
+        `Card front: ${typeof card.front === "object" ? card.front.html : card.front}\n` +
+        `Card back: ${typeof card.back === "object" ? card.back.html : card.back}\n` +
+        (card.hint ? `Hint: ${card.hint}\n` : "") +
+        (card.example ? `Example: ${card.example.text} (${card.example.translation || ""})\n` : "") +
+        `Please explain.` }],
+    }, { onText: (t) => { out.textContent += t; }, signal: ctrl.signal });
+    typeset(out);
+    if (resp.stop_reason === "refusal") { out.textContent += "\n[Modellen avslo å svare.]"; return; }
+    box.querySelector(".toolrow").innerHTML = `<button id="ainote">lagre som notat på kortet</button>`;
+    $("#ainote").onclick = () => {
+      const key = progressKey(ref.deckId, ref.cardId, ref.rev);
+      store.patch(st => { st.meta.notes[key] = out.textContent; });
+      box.querySelector(".toolrow").innerHTML = `<span class="muted small">lagret ✓</span>`;
+    };
+  } catch (e) {
+    if (e.name !== "AbortError") out.textContent += "\n[Feil: " + aiError(e) + "]";
+  }
+}
+
+/* --- generer kort --- */
+const GEN_SCHEMA = {
+  type: "object",
+  properties: {
+    cards: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          id: { type: "string" },
+          front: { type: "string" },
+          back: { type: "string" },
+          hint: { anyOf: [{ type: "string" }, { type: "null" }] },
+          example: { anyOf: [{
+            type: "object",
+            properties: { text: { type: "string" }, translation: { type: "string" } },
+            required: ["text", "translation"], additionalProperties: false,
+          }, { type: "null" }] },
+          tts: { anyOf: [{ type: "string" }, { type: "null" }] },
+          reverse: { type: "boolean" },
+        },
+        required: ["id", "front", "back", "hint", "example", "tts", "reverse"],
+        additionalProperties: false,
+      },
+    },
+  },
+  required: ["cards"], additionalProperties: false,
+};
+
+function generateDialog(defaultDeckId) {
+  const all = decks();
+  const deckOpts = all.map(d =>
+    `<option value="${esc(d.id)}" ${d.id === defaultDeckId ? "selected" : ""}>${esc(d.title)}</option>`).join("");
+  const dlg = openDialog(`<form method="dialog" style="padding:1.2rem">
+    <h2 style="margin-top:0">✨ Generer kort</h2>
+    <label>Tema for kortene</label><input id="g-topic" required placeholder="f.eks. russiske verb for bevegelse">
+    <label>Antall</label><input id="g-count" type="number" min="1" max="20" value="8" style="max-width:5rem">
+    <label>Nivå</label><input id="g-level" placeholder="f.eks. nybegynner">
+    <label>Ekstra instruks (valgfritt)</label><textarea id="g-extra" rows="2"></textarea>
+    <label>Legg i tema</label>
+    <select id="g-deck">${deckOpts}<option value="__new__">— nytt tema —</option></select>
+    <div id="g-newdeck" class="hidden"><label>Navn på nytt tema</label><input id="g-newtitle"></div>
+    <label>Leksjon</label><select id="g-lesson"></select>
+    <div id="g-preview"></div>
+    <p id="g-status" class="small muted"></p>
+    <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:.8rem">
+      <button value="cancel" formnovalidate>Lukk</button>
+      <button type="button" id="g-run" class="primary">Generer</button>
+    </div></form>`);
+
+  const lessonSel = $("#g-lesson", dlg);
+  function fillLessons() {
+    const id = $("#g-deck", dlg).value;
+    $("#g-newdeck", dlg).classList.toggle("hidden", id !== "__new__");
+    const deck = store.get().decksCache[id];
+    lessonSel.innerHTML = (deck ? deck.lessons.map(l =>
+      `<option value="${esc(l.id)}">${esc(l.title)}</option>`).join("") : "") +
+      `<option value="__new__">— ny leksjon —</option>`;
+  }
+  fillLessons();
+  $("#g-deck", dlg).onchange = fillLessons;
+
+  $("#g-run", dlg).onclick = async () => {
+    const topic = $("#g-topic", dlg).value.trim();
+    if (!topic) return;
+    const status = $("#g-status", dlg);
+    status.textContent = "Genererer …";
+    const s = store.get().settings;
+    const targetDeck = store.get().decksCache[$("#g-deck", dlg).value];
+    try {
+      const resp = await aiMessage({
+        model: s.model, max_tokens: 8000,
+        system: "You create high-quality flashcards. Rules: one atomic fact per card; front is a question/prompt, back is the answer; use cloze ('___') where it aids recall; you may use $...$ / $$...$$ for math (KaTeX); for vocabulary set reverse=true, give tts = the target-language text, and include a short natural example sentence with translation; ids must be short kebab-case slugs; hint only when genuinely helpful, else null.",
+        messages: [{ role: "user", content:
+          `Create ${+$("#g-count", dlg).value || 8} flashcards.\nTopic: ${topic}\nLevel: ${$("#g-level", dlg).value || "unspecified"}\n` +
+          (targetDeck ? `Deck context: ${targetDeck.explainContext || targetDeck.title}\n` : "") +
+          ($("#g-extra", dlg).value ? `Extra instructions: ${$("#g-extra", dlg).value}\n` : "") }],
+        output_config: { format: { type: "json_schema", schema: GEN_SCHEMA } },
+      });
+      if (resp.stop_reason === "refusal") throw new Error("Modellen avslo forespørselen.");
+      if (resp.stop_reason === "max_tokens") throw new Error("Svaret ble avkuttet — prøv færre kort.");
+      const cards = JSON.parse(resp.content.find(b => b.type === "text").text).cards;
+      status.textContent = `${cards.length} kort — velg hvilke du vil beholde:`;
+      $("#g-preview", dlg).innerHTML = cards.map((c, i) => `
+        <label style="display:flex;gap:.5rem;align-items:baseline;margin:.3rem 0;color:var(--fg)">
+          <input type="checkbox" checked data-ci="${i}" style="width:auto">
+          <span><strong>${esc(c.front)}</strong> → ${esc(c.back)}
+            ${c.example ? `<br><span class="muted small">${esc(c.example.text)}</span>` : ""}</span>
+        </label>`).join("") +
+        `<button type="button" id="g-save" class="primary" style="margin-top:.6rem">Lagre valgte</button>`;
+      typeset($("#g-preview", dlg));
+      $("#g-save", dlg).onclick = () => {
+        const chosen = [...dlg.querySelectorAll("[data-ci]:checked")].map(el => cards[+el.dataset.ci]);
+        saveGenerated(chosen, dlg, topic);
+      };
+    } catch (e) { status.textContent = "Feil: " + aiError(e); }
+  };
+}
+
+function saveGenerated(cards, dlg, topic) {
+  if (!cards.length) return;
+  const deckSel = $("#g-deck", dlg).value;
+  const lessonSel = $("#g-lesson", dlg).value;
+  store.patch(s => {
+    let deck;
+    if (deckSel === "__new__") {
+      const title = $("#g-newtitle", dlg).value.trim() || topic;
+      const id = "own-" + title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 30);
+      deck = s.decksCache[id] || { id, title, own: true, settings: { tts: false }, lessons: [] };
+      s.decksCache[id] = deck;
+    } else {
+      deck = s.decksCache[deckSel];
+      deck.own = true; // redigert lokalt → synkes
+    }
+    let lesson;
+    if (lessonSel === "__new__" || !deck.lessons.length) {
+      lesson = { id: "gen-" + Date.now().toString(36), title: topic, cards: [] };
+      deck.lessons.push(lesson);
+    } else {
+      lesson = deck.lessons.find(l => l.id === lessonSel) || deck.lessons.at(-1);
+    }
+    const existing = new Set(deck.lessons.flatMap(l => l.cards.map(c => c.id)));
+    for (const c of cards) {
+      let id = c.id, n = 1;
+      while (existing.has(id)) id = `${c.id}-${n++}`;
+      existing.add(id);
+      const card = { id, front: c.front, back: c.back };
+      if (c.hint) card.hint = c.hint;
+      if (c.example) card.example = c.example;
+      if (c.tts) card.tts = c.tts;
+      if (c.reverse) card.reverse = true;
+      lesson.cards.push(card);
+    }
+  });
+  dlg.close();
+  render();
+}
+
+/* --- omskriv leech --- */
+function rewriteDialog(deck, key) {
+  const cardId = key.split("/")[1];
+  const found = findCard(deck, cardId);
+  if (!found) return;
+  const dlg = openDialog(`<div style="padding:1.2rem">
+    <h2 style="margin-top:0">✨ Forslag til omskriving</h2>
+    <p class="muted small">Kortet feiler ofte — som regel er kortet problemet, ikke hukommelsen.</p>
+    <div class="ai-out" id="rw-out"></div>
+    <div style="display:flex;justify-content:flex-end;margin-top:.8rem">
+      <button onclick="this.closest('dialog').close()">Lukk</button></div></div>`);
+  const out = $("#rw-out", dlg);
+  const s = store.get().settings;
+  aiMessage({
+    model: s.model, max_tokens: 800,
+    system: "The following flashcard keeps being failed (a 'leech'). Diagnose why (too broad? ambiguous? missing context?) and propose 1-3 rewritten versions, possibly splitting it into multiple atomic cards. Answer briefly in the card's language context.",
+    messages: [{ role: "user", content:
+      `Context: ${deck.explainContext || deck.title}\nFront: ${typeof found.card.front === "object" ? found.card.front.html : found.card.front}\nBack: ${typeof found.card.back === "object" ? found.card.back.html : found.card.back}` }],
+  }, { onText: (t) => { out.textContent += t; } })
+    .then(() => typeset(out))
+    .catch(e => { out.textContent += "\n[Feil: " + aiError(e) + "]"; });
+}
 
 /* ========== router & tastatur ========== */
 function currentView() { return (location.hash || "#home").slice(1).split("/")[0]; }
