@@ -1,0 +1,153 @@
+{
+  "id": "probability",
+  "title": "Sannsynlighet og statistikk",
+  "language": { "front": "no", "back": "no" },
+  "explainContext": "The user is a health economics researcher refreshing probability and statistics. Explain in Norwegian, rigor is welcome, use $...$ for math.",
+  "settings": { "tts": false },
+  "lessons": [
+    {
+      "id": "p01-counting",
+      "title": "Mengder og telling",
+      "cards": [
+        { "id": "union-def", "front": "Hva er $A \\cup B$?", "back": "Unionen: utfall som er i $A$ eller $B$ (eller begge)" },
+        { "id": "intersect-def", "front": "Hva er $A \\cap B$?", "back": "Snittet: utfall som er i både $A$ og $B$" },
+        { "id": "complement-def", "front": "Hva er $A^c$?", "back": "Komplementet: alle utfall som ikke er i $A$" },
+        { "id": "disjoint", "front": "Når er $A$ og $B$ disjunkte?", "back": "Når $A \\cap B = \\emptyset$ — de kan ikke inntreffe samtidig" },
+        { "id": "mult-rule", "front": "Multiplikasjonsprinsippet for telling?", "back": "Kan trinn 1 gjøres på $m$ måter og trinn 2 på $n$ måter, kan begge gjøres på $m \\cdot n$ måter" },
+        { "id": "perm", "front": "Antall permutasjoner av $n$ elementer?", "back": "$n! = n(n-1)(n-2)\\cdots 1$" },
+        { "id": "nperm", "front": "Antall ordnede utvalg av $k$ fra $n$?", "back": "$\\dfrac{n!}{(n-k)!}$" },
+        { "id": "binom-coef", "front": "Antall uordnede utvalg av $k$ fra $n$ («$n$ velg $k$»)?", "back": "$\\dbinom{n}{k} = \\dfrac{n!}{k!(n-k)!}$" },
+        { "id": "binom-example", "front": "Hvor mange pokerhender (5 kort av 52)?", "back": "$\\dbinom{52}{5} = 2\\,598\\,960$", "hint": "Uordnet utvalg" }
+      ]
+    },
+    {
+      "id": "p02-axioms",
+      "title": "Aksiomer og grunnregler",
+      "cards": [
+        { "id": "axioms", "front": "Kolmogorovs tre aksiomer?", "back": { "html": "<table><tr><td>1.</td><td>$P(A) \\ge 0$</td></tr><tr><td>2.</td><td>$P(\\Omega) = 1$</td></tr><tr><td>3.</td><td>$P\\big(\\bigcup_i A_i\\big) = \\sum_i P(A_i)$ for disjunkte $A_i$</td></tr></table>" } },
+        { "id": "complement-rule", "front": "$P(A^c) = $ ___", "back": "$1 - P(A)$" },
+        { "id": "addition-rule", "front": "$P(A \\cup B) = $ ___ (generelt)", "back": "$P(A) + P(B) - P(A \\cap B)$" },
+        { "id": "monotone", "front": "Hvis $A \\subseteq B$, hva vet vi om $P(A)$ og $P(B)$?", "back": "$P(A) \\le P(B)$" },
+        { "id": "atleastone", "front": "Standardtriks for «minst én»-sannsynligheter?", "back": "Gå via komplementet: $P(\\text{minst én}) = 1 - P(\\text{ingen})$", "hint": "F.eks. minst én sekser på 4 kast" },
+        { "id": "birthday", "front": "Bursdagsproblemet: $P$(minst to deler bursdag blant 23)?", "back": "$\\approx 0{,}507$ — via $1 - \\frac{365 \\cdot 364 \\cdots 343}{365^{23}}$" }
+      ]
+    },
+    {
+      "id": "p03-conditional-bayes",
+      "title": "Betinget sannsynlighet og Bayes",
+      "note": "Bygger på leksjon 2. Bayes er bare betinget sannsynlighet lest baklengs.",
+      "cards": [
+        { "id": "cond-def", "front": "Definisjon: $P(A \\mid B) = $ ___", "back": "$\\dfrac{P(A \\cap B)}{P(B)}$, når $P(B) > 0$" },
+        { "id": "mult-prob", "front": "Multiplikasjonsregelen for sannsynlighet?", "back": "$P(A \\cap B) = P(A \\mid B)\\,P(B)$" },
+        { "id": "independence", "front": "Når er $A$ og $B$ uavhengige?", "back": "$P(A \\cap B) = P(A)P(B)$, ekvivalent $P(A \\mid B) = P(A)$" },
+        { "id": "lotp", "front": "Loven om total sannsynlighet?", "back": "$P(A) = \\sum_i P(A \\mid B_i)P(B_i)$ når $B_i$ er en partisjon av utfallsrommet" },
+        { "id": "bayes", "front": "Bayes' setning?", "back": "$P(B \\mid A) = \\dfrac{P(A \\mid B)\\,P(B)}{P(A)}$" },
+        { "id": "bayes-test", "front": "Sykdom: prevalens 1 %, sensitivitet 90 %, falsk positiv-rate 5 %. $P(\\text{syk} \\mid \\text{positiv})$?", "back": "$\\dfrac{0{,}9 \\cdot 0{,}01}{0{,}9 \\cdot 0{,}01 + 0{,}05 \\cdot 0{,}99} \\approx 15\\,\\%$", "hint": "Lav prevalens dominerer" },
+        { "id": "prosecutor", "front": "Hva er «the prosecutor's fallacy»?", "back": "Å forveksle $P(\\text{bevis} \\mid \\text{uskyldig})$ med $P(\\text{uskyldig} \\mid \\text{bevis})$" },
+        { "id": "cond-chain", "front": "$P(A \\cap B \\cap C)$ via kjederegelen?", "back": "$P(A)\\,P(B \\mid A)\\,P(C \\mid A \\cap B)$" }
+      ]
+    },
+    {
+      "id": "p04-discrete",
+      "title": "Diskrete fordelinger",
+      "cards": [
+        { "id": "pmf", "front": "Hva er en sannsynlighetsfunksjon (pmf)?", "back": "$p(x) = P(X = x)$ for en diskret variabel; $\\sum_x p(x) = 1$" },
+        { "id": "bernoulli", "front": "Bernoulli($p$): pmf, $E[X]$, $\\operatorname{Var}(X)$?", "back": "$P(X{=}1)=p$, $P(X{=}0)=1-p$; $E[X]=p$; $\\operatorname{Var}(X)=p(1-p)$" },
+        { "id": "binomial-pmf", "front": "Binomisk($n, p$): $P(X = k) = $ ___", "back": "$\\dbinom{n}{k} p^k (1-p)^{n-k}$" },
+        { "id": "binomial-moments", "front": "Binomisk($n, p$): $E[X]$ og $\\operatorname{Var}(X)$?", "back": "$E[X] = np$, $\\operatorname{Var}(X) = np(1-p)$" },
+        { "id": "binomial-when", "front": "Når er en variabel binomisk?", "back": "Antall suksesser i $n$ uavhengige forsøk med samme suksess-sannsynlighet $p$" },
+        { "id": "poisson-pmf", "front": "Poisson($\\lambda$): $P(X = k) = $ ___", "back": "$\\dfrac{\\lambda^k e^{-\\lambda}}{k!}$" },
+        { "id": "poisson-moments", "front": "Poisson($\\lambda$): $E[X]$ og $\\operatorname{Var}(X)$?", "back": "Begge er $\\lambda$ — et kjennetegn ved Poisson" },
+        { "id": "poisson-when", "front": "Når brukes Poisson-fordelingen?", "back": "Antall hendelser i et intervall når hendelser skjer uavhengig med konstant rate — og som grense for binomisk med stor $n$, liten $p$" },
+        { "id": "geometric", "front": "Geometrisk($p$): hva teller den, og $E[X]$?", "back": "Antall forsøk til første suksess; $E[X] = 1/p$" }
+      ]
+    },
+    {
+      "id": "p05-continuous",
+      "title": "Kontinuerlige fordelinger",
+      "cards": [
+        { "id": "pdf", "front": "Hva kjennetegner en tetthetsfunksjon $f(x)$?", "back": "$f(x) \\ge 0$, $\\int f(x)\\,dx = 1$, og $P(a \\le X \\le b) = \\int_a^b f(x)\\,dx$. Merk: $P(X = x) = 0$" },
+        { "id": "cdf", "front": "Hva er den kumulative fordelingsfunksjonen $F(x)$?", "back": "$F(x) = P(X \\le x) = \\int_{-\\infty}^x f(t)\\,dt$; $f = F'$" },
+        { "id": "uniform", "front": "Uniform($a, b$): tetthet og $E[X]$?", "back": "$f(x) = \\frac{1}{b-a}$ på $[a,b]$; $E[X] = \\frac{a+b}{2}$" },
+        { "id": "expo", "front": "Eksponensial($\\lambda$): tetthet og $E[X]$?", "back": "$f(x) = \\lambda e^{-\\lambda x}$ for $x \\ge 0$; $E[X] = 1/\\lambda$" },
+        { "id": "expo-memoryless", "front": "Hva er «hukommelsesløshet» hos eksponensialfordelingen?", "back": "$P(X > s + t \\mid X > s) = P(X > t)$ — ventetiden «starter på nytt»" },
+        { "id": "normal-pdf", "front": "Normalfordelingen $N(\\mu, \\sigma^2)$: tetthet?", "back": "$f(x) = \\dfrac{1}{\\sigma\\sqrt{2\\pi}} e^{-\\frac{(x-\\mu)^2}{2\\sigma^2}}$" },
+        { "id": "standardize", "front": "Hvordan standardiseres $X \\sim N(\\mu, \\sigma^2)$?", "back": "$Z = \\dfrac{X - \\mu}{\\sigma} \\sim N(0, 1)$" },
+        { "id": "empirical-rule", "front": "68–95–99,7-regelen?", "back": "Andel innen $\\mu \\pm 1\\sigma$, $\\pm 2\\sigma$, $\\pm 3\\sigma$ i en normalfordeling" },
+        { "id": "quantile", "front": "Hva er 97,5 %-kvantilen i $N(0,1)$?", "back": "$z_{0{,}975} \\approx 1{,}96$ — grunnlaget for 95 %-intervaller" }
+      ]
+    },
+    {
+      "id": "p06-expectation",
+      "title": "Forventning og varians",
+      "note": "Regnereglene her brukes i alt som følger — CLT, estimering, testing.",
+      "cards": [
+        { "id": "expect-def", "front": "Definisjon av $E[X]$ (diskret og kontinuerlig)?", "back": "$\\sum_x x\\,p(x)$ eller $\\int x f(x)\\,dx$ — det sannsynlighetsvektede gjennomsnittet" },
+        { "id": "expect-linear", "front": "$E[aX + bY + c] = $ ___", "back": "$aE[X] + bE[Y] + c$ — alltid, uten krav om uavhengighet" },
+        { "id": "var-def", "front": "Definisjon: $\\operatorname{Var}(X) = $ ___", "back": "$E[(X - \\mu)^2] = E[X^2] - (E[X])^2$" },
+        { "id": "var-linear", "front": "$\\operatorname{Var}(aX + b) = $ ___", "back": "$a^2 \\operatorname{Var}(X)$ — konstanten $b$ forsvinner, $a$ kvadreres" },
+        { "id": "var-sum", "front": "$\\operatorname{Var}(X + Y) = $ ___ (generelt)", "back": "$\\operatorname{Var}(X) + \\operatorname{Var}(Y) + 2\\operatorname{Cov}(X, Y)$" },
+        { "id": "var-sum-indep", "front": "$\\operatorname{Var}(X + Y)$ når $X, Y$ er uavhengige?", "back": "$\\operatorname{Var}(X) + \\operatorname{Var}(Y)$" },
+        { "id": "sd", "front": "Hva er standardavviket?", "back": "$\\sigma = \\sqrt{\\operatorname{Var}(X)}$ — samme enhet som $X$" },
+        { "id": "lotus", "front": "Hvordan beregnes $E[g(X)]$ («LOTUS»)?", "back": "$\\sum_x g(x)p(x)$ eller $\\int g(x)f(x)\\,dx$ — uten å finne fordelingen til $g(X)$" },
+        { "id": "jensen-trap", "front": "Er $E[g(X)] = g(E[X])$?", "back": "Nei, generelt ikke! For konveks $g$: $E[g(X)] \\ge g(E[X])$ (Jensens ulikhet)" }
+      ]
+    },
+    {
+      "id": "p07-covariance",
+      "title": "Kovarians og korrelasjon",
+      "cards": [
+        { "id": "cov-def", "front": "Definisjon: $\\operatorname{Cov}(X, Y) = $ ___", "back": "$E[(X - \\mu_X)(Y - \\mu_Y)] = E[XY] - E[X]E[Y]$" },
+        { "id": "corr-def", "front": "Definisjon: $\\rho(X, Y) = $ ___", "back": "$\\dfrac{\\operatorname{Cov}(X, Y)}{\\sigma_X \\sigma_Y}$, alltid i $[-1, 1]$" },
+        { "id": "indep-cov", "front": "Uavhengighet vs. kovarians null?", "back": "Uavhengighet $\\Rightarrow$ $\\operatorname{Cov} = 0$, men ikke omvendt", "hint": "Motsatt vei: $Y = X^2$ med symmetrisk $X$" },
+        { "id": "cov-bilinear", "front": "$\\operatorname{Cov}(aX, bY) = $ ___", "back": "$ab\\operatorname{Cov}(X, Y)$" },
+        { "id": "corr-meaning", "front": "Hva måler korrelasjonen — og hva måler den ikke?", "back": "Styrken på lineær samvariasjon; ikke ikke-lineære sammenhenger og ikke årsakssammenheng" },
+        { "id": "cov-self", "front": "$\\operatorname{Cov}(X, X) = $ ___", "back": "$\\operatorname{Var}(X)$" }
+      ]
+    },
+    {
+      "id": "p08-lln-clt",
+      "title": "Store talls lov og sentralgrenseteoremet",
+      "note": "Bygger direkte på forventning og varians (leksjon 6).",
+      "cards": [
+        { "id": "xbar-moments", "front": "For iid $X_i$ med snitt $\\mu$, varians $\\sigma^2$: $E[\\bar{X}]$ og $\\operatorname{Var}(\\bar{X})$?", "back": "$E[\\bar{X}] = \\mu$ og $\\operatorname{Var}(\\bar{X}) = \\sigma^2 / n$" },
+        { "id": "se", "front": "Hva er standardfeilen til gjennomsnittet?", "back": "$\\operatorname{SE} = \\sigma / \\sqrt{n}$ — halvering krever firedobling av $n$" },
+        { "id": "lln", "front": "Store talls lov (LLN)?", "back": "$\\bar{X}_n \\to \\mu$ når $n \\to \\infty$ — gjennomsnittet konvergerer mot forventningen" },
+        { "id": "clt", "front": "Sentralgrenseteoremet (CLT)?", "back": "$\\dfrac{\\bar{X} - \\mu}{\\sigma/\\sqrt{n}} \\xrightarrow{d} N(0, 1)$ — uansett fordeling på $X_i$ (med endelig varians)" },
+        { "id": "clt-why", "front": "Hvorfor er CLT så viktig i praksis?", "back": "Gjennomsnitt og summer blir tilnærmet normalfordelte — derfor fungerer konfidensintervaller og tester også for ikke-normale data" },
+        { "id": "clt-misuse", "front": "CLT gjelder gjennomsnittet — hva gjelder det ikke?", "back": "Enkeltobservasjonene: fordelingen til $X_i$ selv blir ikke normal av mer data" },
+        { "id": "lln-fallacy", "front": "Hva er gamblerens feilslutning i lys av LLN?", "back": "LLN sier andelene jevner seg ut på lang sikt — ikke at tidligere utfall «skylder» en korreksjon; kastene er uavhengige" }
+      ]
+    },
+    {
+      "id": "p09-estimation",
+      "title": "Estimering og konfidensintervaller",
+      "cards": [
+        { "id": "estimator-def", "front": "Hva er en estimator, og hva er forventningsretthet?", "back": "En funksjon av data som anslår en parameter; forventningsrett hvis $E[\\hat\\theta] = \\theta$" },
+        { "id": "s2", "front": "Hvorfor deles utvalgsvariansen på $n-1$?", "back": "$s^2 = \\frac{1}{n-1}\\sum (x_i - \\bar{x})^2$ blir da forventningsrett — $\\bar{x}$ «bruker opp» én frihetsgrad" },
+        { "id": "ci-mean", "front": "95 %-KI for $\\mu$ (stor $n$)?", "back": "$\\bar{x} \\pm 1{,}96 \\cdot \\dfrac{s}{\\sqrt{n}}$" },
+        { "id": "ci-interpret", "front": "Riktig tolkning av et 95 %-konfidensintervall?", "back": "Prosedyren fanger sann verdi i 95 % av gjentatte utvalg — ikke «95 % sannsynlighet for at $\\mu$ ligger i akkurat dette intervallet»" },
+        { "id": "t-vs-z", "front": "Når brukes $t$-fordelingen i stedet for normal?", "back": "Liten $n$ og ukjent $\\sigma$ — tyngre haler, $n-1$ frihetsgrader; nærmer seg normalen når $n$ vokser" },
+        { "id": "ci-prop", "front": "95 %-KI for en andel $p$?", "back": "$\\hat{p} \\pm 1{,}96\\sqrt{\\dfrac{\\hat{p}(1-\\hat{p})}{n}}$" },
+        { "id": "mle-idea", "front": "Ideen bak maximum likelihood (ML)?", "back": "Velg parameterverdien som gjør de observerte dataene mest sannsynlige: $\\hat\\theta = \\arg\\max_\\theta L(\\theta; x)$" },
+        { "id": "n-for-moe", "front": "Hvor stort utvalg for feilmargin $\\pm 3$ prosentpoeng (andel, 95 %)?", "back": "$n \\approx \\left(\\frac{1{,}96 \\cdot 0{,}5}{0{,}03}\\right)^2 \\approx 1067$", "hint": "Verste fall $p = 0{,}5$" }
+      ]
+    },
+    {
+      "id": "p10-testing",
+      "title": "Hypotesetesting",
+      "note": "Siste leksjon — samler alt: fordelinger, CLT, estimering.",
+      "cards": [
+        { "id": "h0-h1", "front": "Hva er $H_0$ og $H_1$?", "back": "Nullhypotesen (status quo, «ingen effekt») og alternativhypotesen; testen vurderer bevis mot $H_0$" },
+        { "id": "pvalue", "front": "Presis definisjon av p-verdi?", "back": "Sannsynligheten for et resultat minst like ekstremt som det observerte, gitt at $H_0$ er sann" },
+        { "id": "pvalue-not", "front": "Hva er p-verdien ikke?", "back": "Ikke $P(H_0 \\mid \\text{data})$, ikke sannsynligheten for at funnet skyldes tilfeldighet, ikke effektstørrelse" },
+        { "id": "type12", "front": "Type I- og type II-feil?", "back": { "html": "<table><tr><td>Type I ($\\alpha$)</td><td>forkaste sann $H_0$</td></tr><tr><td>Type II ($\\beta$)</td><td>beholde gal $H_0$</td></tr></table>" } },
+        { "id": "power", "front": "Hva er styrken (power) til en test?", "back": "$1 - \\beta$: sannsynligheten for å forkaste $H_0$ når den faktisk er gal; øker med $n$ og effektstørrelse" },
+        { "id": "z-test", "front": "Teststatistikk for ett gjennomsnitt (stor $n$)?", "back": "$z = \\dfrac{\\bar{x} - \\mu_0}{s/\\sqrt{n}}$; forkast ved $|z| > 1{,}96$ (5 %-nivå, tosidig)" },
+        { "id": "ci-test-duality", "front": "Sammenhengen mellom KI og test?", "back": "Et 95 %-KI inneholder nøyaktig de $\\mu_0$ som ikke forkastes på 5 %-nivå (tosidig)" },
+        { "id": "sig-vs-practical", "front": "Statistisk vs. praktisk signifikans?", "back": "Med stor nok $n$ blir bagatellmessige forskjeller «signifikante» — se alltid på effektstørrelsen" },
+        { "id": "multiple-testing", "front": "Hva skjer med 20 uavhengige tester på 5 %-nivå når alle $H_0$ er sanne?", "back": "$P(\\text{minst én falsk positiv}) = 1 - 0{,}95^{20} \\approx 64\\,\\%$ — derfor korrigeres det for multiple tester", "hint": "Samme triks som «minst én» i leksjon 2" }
+      ]
+    }
+  ]
+}
