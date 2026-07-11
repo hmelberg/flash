@@ -1,0 +1,440 @@
+<!doctype html>
+<html lang="no">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>flash</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<style>
+:root {
+  --bg: #fbfaf7; --fg: #1c1c1c; --muted: #767268; --card: #ffffff;
+  --border: #e3e0d8; --accent: #2f6f4f; --danger: #b3402f; --warn: #a06a00;
+  --btn: #f0eee8;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #16181a; --fg: #e8e6e1; --muted: #9a968d; --card: #1f2225;
+    --border: #33373b; --accent: #6fbf94; --danger: #e07a68; --warn: #d9a441;
+    --btn: #26292d;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg);
+  font: 17px/1.5 system-ui, -apple-system, sans-serif; }
+header { display: flex; gap: 1rem; align-items: baseline; padding: .7rem 1rem;
+  border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+header .logo { font-weight: 700; letter-spacing: .02em; }
+header a { color: var(--muted); text-decoration: none; }
+header a.active, header a:hover { color: var(--fg); }
+main { max-width: 720px; margin: 0 auto; padding: 1rem; }
+h1 { font-size: 1.3rem; } h2 { font-size: 1.1rem; }
+button { font: inherit; border: 1px solid var(--border); background: var(--btn);
+  color: var(--fg); border-radius: 8px; padding: .45rem .9rem; cursor: pointer; }
+button:hover { border-color: var(--muted); }
+button.primary { background: var(--accent); color: #fff; border-color: transparent; }
+button.danger { color: var(--danger); }
+input, select, textarea { font: inherit; background: var(--card); color: var(--fg);
+  border: 1px solid var(--border); border-radius: 6px; padding: .35rem .5rem; width: 100%; }
+label { display: block; margin: .7rem 0 .15rem; color: var(--muted); font-size: .9rem; }
+.deckrow { display: flex; justify-content: space-between; align-items: center; gap: .8rem;
+  padding: .8rem; border: 1px solid var(--border); border-radius: 10px; margin: .6rem 0;
+  background: var(--card); flex-wrap: wrap; }
+.deckrow .counts { color: var(--muted); font-size: .9rem; }
+.muted { color: var(--muted); } .small { font-size: .85rem; }
+/* Kort */
+.card { background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+  padding: 2rem 1.4rem; margin: 1rem 0; min-height: 220px; display: flex;
+  flex-direction: column; justify-content: center; text-align: center; cursor: pointer; }
+.card .side { font-size: 1.5rem; overflow-x: auto; }
+.card .side table { margin: .5rem auto; border-collapse: collapse; font-size: 1.05rem; }
+.card .side td, .card .side th { border: 1px solid var(--border); padding: .25rem .6rem; }
+.card img { max-width: 100%; max-height: 220px; border-radius: 8px; margin: .5rem auto; }
+.card .example { margin-top: 1rem; padding-top: .8rem; border-top: 1px dashed var(--border);
+  font-size: 1.05rem; color: var(--muted); }
+.card .divider { border-top: 1px solid var(--border); margin: 1rem 0; }
+.gradebar { display: flex; gap: .6rem; justify-content: center; margin: .8rem 0; flex-wrap: wrap; }
+.gradebar button { min-width: 7.5rem; padding: .8rem .8rem; font-size: 1.05rem; }
+.gradebar .fail { border-color: var(--danger); }
+.gradebar .ok { background: var(--accent); color: #fff; border-color: transparent; }
+.toolrow { display: flex; gap: .6rem; justify-content: center; color: var(--muted); flex-wrap: wrap; }
+.toolrow button { border: none; background: none; color: var(--muted); padding: .3rem .5rem; }
+.badge { font-size: .72rem; padding: .1rem .45rem; border-radius: 99px;
+  border: 1px solid var(--border); color: var(--muted); vertical-align: middle; }
+.badge.new { color: var(--accent); border-color: var(--accent); }
+.badge.leech { color: var(--danger); border-color: var(--danger); }
+.banner { border: 1px solid var(--warn); border-radius: 10px; padding: .7rem .9rem;
+  margin: .8rem 0; background: color-mix(in srgb, var(--warn) 8%, var(--card)); }
+.progressline { color: var(--muted); font-size: .9rem; text-align: center; }
+.kbdhint { text-align: center; color: var(--muted); font-size: .8rem; margin-top: 1.2rem; }
+kbd { border: 1px solid var(--border); border-radius: 4px; padding: 0 .3rem; font-size: .85em; }
+.hidden { display: none; }
+.lesson { margin: 1rem 0; }
+.lesson h3 { margin: .3rem 0; font-size: 1rem; }
+.cardlist { width: 100%; border-collapse: collapse; font-size: .92rem; }
+.cardlist td { border-bottom: 1px solid var(--border); padding: .35rem .4rem; vertical-align: top; }
+.bars { display: flex; gap: 3px; align-items: flex-end; height: 70px; margin: .5rem 0; }
+.bars .bar { width: 22px; background: var(--accent); border-radius: 3px 3px 0 0; min-height: 2px; }
+.bars .bar span { display: block; transform: translateY(-1.3rem); font-size: .7rem; text-align: center; color: var(--muted); }
+dialog { background: var(--card); color: var(--fg); border: 1px solid var(--border);
+  border-radius: 12px; max-width: 640px; width: 92vw; }
+dialog::backdrop { background: rgba(0,0,0,.45); }
+.ai-out { white-space: pre-wrap; font-size: .98rem; text-align: left; background: var(--bg);
+  border: 1px solid var(--border); border-radius: 8px; padding: .7rem .9rem; margin-top: .8rem; }
+</style>
+</head>
+<body>
+<header>
+  <span class="logo">⚡ flash</span>
+  <a href="#home" data-nav="home">Hjem</a>
+  <a href="#browse" data-nav="browse">Bla</a>
+  <a href="#stats" data-nav="stats">Statistikk</a>
+  <a href="#settings" data-nav="settings">Innstillinger</a>
+</header>
+<main id="app"></main>
+
+<script type="module">
+import { newCardState, schedule, isLeech, isMature, DAY } from "./srs.js";
+import { buildSession, unlockedLessons, allRefs, progressKey } from "./queue.js";
+
+/* ========== lagring ========== */
+const KEY = "flash:v1";
+const DEFAULTS = {
+  progress: {},
+  settings: { newPerDay: 10, tts: true, autoplay: true, unlocked: [],
+    model: "claude-opus-4-8", apiKey: "", ghRepo: "", ghPat: "", autoSync: false },
+  decksCache: {},
+  meta: { newUsedByDay: {}, notes: {}, lastSync: 0 },
+};
+const store = (() => {
+  let data;
+  try { data = JSON.parse(localStorage.getItem(KEY)) || structuredClone(DEFAULTS); }
+  catch { data = structuredClone(DEFAULTS); }
+  for (const k of Object.keys(DEFAULTS)) data[k] ??= structuredClone(DEFAULTS[k]);
+  for (const k of Object.keys(DEFAULTS.settings)) data.settings[k] ??= DEFAULTS.settings[k];
+  const save = () => localStorage.setItem(KEY, JSON.stringify(data));
+  return { get: () => data, patch(fn) { fn(data); save(); } };
+})();
+const todayKey = (t = Date.now()) => new Date(t).toISOString().slice(0, 10);
+const newUsedToday = () => store.get().meta.newUsedByDay[todayKey()] || 0;
+
+/* ========== deck-innlasting ========== */
+const BUILTIN = ["russian", "probability"];
+
+function validateDeck(d) {
+  const fail = (msg) => { throw new Error(`Ugyldig deck: ${msg}`); };
+  if (!d || typeof d !== "object") fail("ikke et JSON-objekt");
+  if (!d.id) fail("mangler 'id'");
+  if (!d.title) fail("mangler 'title'");
+  if (!Array.isArray(d.lessons) || !d.lessons.length) fail("mangler 'lessons'");
+  const seen = new Set();
+  d.lessons.forEach((l, li) => {
+    if (!l.id) fail(`leksjon ${li + 1} mangler 'id'`);
+    if (!Array.isArray(l.cards)) fail(`leksjon '${l.id}' mangler 'cards'`);
+    l.cards.forEach((c, ci) => {
+      if (!c.id) fail(`leksjon '${l.id}', kort ${ci + 1}: mangler 'id'`);
+      if (seen.has(c.id)) fail(`duplikat kort-id '${c.id}'`);
+      seen.add(c.id);
+      if (c.front == null || c.back == null) fail(`kort '${c.id}': mangler front/back`);
+    });
+  });
+  return d;
+}
+function cacheDeck(deck) { store.patch(s => { s.decksCache[deck.id] = deck; }); }
+function decks() { return Object.values(store.get().decksCache); }
+
+async function loadBuiltins() {
+  for (const name of BUILTIN) {
+    try {
+      const r = await fetch(`decks/${name}.json`, { cache: "no-cache" });
+      if (r.ok) cacheDeck(validateDeck(await r.json()));
+    } catch { /* file:// eller offline — cache/filvelger gjelder */ }
+  }
+}
+async function loadDeckFromUrl(url) {
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  const deck = validateDeck(await r.json());
+  cacheDeck(deck); return deck;
+}
+async function loadDeckFromFile(file) {
+  const deck = validateDeck(JSON.parse(await file.text()));
+  cacheDeck(deck); return deck;
+}
+
+/* ========== hjelpere ========== */
+const $ = (sel, el = document) => el.querySelector(sel);
+const esc = (s) => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+function contentHtml(v) {
+  if (v && typeof v === "object" && v.html) return v.html; // rå HTML — bevisst tillatt (egne decks)
+  return esc(v);
+}
+function typeset(el) {
+  if (window.renderMathInElement) {
+    window.renderMathInElement(el, {
+      delimiters: [
+        { left: "$$", right: "$$", display: true },
+        { left: "$", right: "$", display: false },
+      ],
+      throwOnError: false,
+    });
+  }
+}
+function speak(deck, card) {
+  if (!("speechSynthesis" in window)) return;
+  const text = card.tts || (typeof card.front === "string" ? card.front : "");
+  if (!text) return;
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = deck.language?.front || "en";
+  speechSynthesis.speak(u);
+}
+function deckCounts(deck) {
+  const { progress, settings } = store.get();
+  const s = buildSession({ deck, progress, settings, now: Date.now(), newLimitUsedToday: newUsedToday() });
+  return s.counts;
+}
+function findCard(deck, cardId) {
+  for (const l of deck.lessons) for (const c of l.cards) if (c.id === cardId) return { lesson: l, card: c };
+  return null;
+}
+
+/* ========== økt ========== */
+let session = null; // {deck, queue, idx, flipped, shownAt, failCounts, undo, stats}
+
+function startSession(deckId, includeNew) {
+  const deck = store.get().decksCache[deckId];
+  const { progress, settings } = store.get();
+  const built = buildSession({ deck, progress, settings, now: Date.now(), newLimitUsedToday: newUsedToday() });
+  const queue = built.due.concat(includeNew ? built.newAvail : []);
+  if (!queue.length) { alert("Ingen kort å vise nå."); return; }
+  session = { deck, queue, idx: 0, flipped: false, shownAt: Date.now(),
+    failCounts: {}, undo: null, leechRef: null,
+    stats: { total: 0, ok: 0, fail: 0, newLearned: 0 } };
+  location.hash = "#session";
+}
+
+function currentRef() { return session?.queue[session.idx] ?? null; }
+
+function gradeCard(grade) {
+  const ref = currentRef(); if (!ref || !session.flipped) return;
+  const key = progressKey(ref.deckId, ref.cardId, ref.rev);
+  const prevState = store.get().progress[key] || newCardState();
+  const wasNew = prevState.due === 0;
+  const ms = session.shownAt2 - session.shownAt; // tid til flip
+  const next = schedule(prevState, grade, ms, Date.now());
+  const requeued = grade === "fail" && (session.failCounts[key] || 0) < 2;
+
+  session.undo = { key, prevState: structuredClone(prevState), idx: session.idx,
+    requeued, wasNew, grade };
+  store.patch(s => {
+    s.progress[key] = next;
+    if (wasNew) s.meta.newUsedByDay[todayKey()] = (s.meta.newUsedByDay[todayKey()] || 0) + 1;
+  });
+  session.stats.total++;
+  session.stats[grade === "ok" ? "ok" : "fail"]++;
+  if (wasNew && grade === "ok") session.stats.newLearned++;
+
+  if (requeued) {
+    session.failCounts[key] = (session.failCounts[key] || 0) + 1;
+    session.queue.splice(Math.min(session.idx + 4, session.queue.length), 0, ref);
+  }
+  session.leechRef = (grade === "fail" && isLeech(next)) ? ref : null;
+  session.idx++;
+  session.flipped = false;
+  render();
+}
+
+function undoLast() {
+  const u = session?.undo; if (!u) return;
+  store.patch(s => {
+    s.progress[u.key] = u.prevState;
+    if (u.prevState.reps === 0 && u.prevState.due === 0) delete s.progress[u.key];
+    if (u.wasNew) s.meta.newUsedByDay[todayKey()] = Math.max(0, (s.meta.newUsedByDay[todayKey()] || 1) - 1);
+  });
+  if (u.requeued) {
+    // fjern re-innsatt kopi
+    const pos = session.queue.findIndex((r, i) => i > u.idx && progressKey(r.deckId, r.cardId, r.rev) === u.key);
+    if (pos > -1) session.queue.splice(pos, 1);
+    session.failCounts[u.key] = Math.max(0, (session.failCounts[u.key] || 1) - 1);
+  }
+  session.stats.total--;
+  session.stats[u.grade === "ok" ? "ok" : "fail"]--;
+  if (u.wasNew && u.grade === "ok") session.stats.newLearned--;
+  session.idx = u.idx;
+  session.flipped = false;
+  session.undo = null;
+  session.leechRef = null;
+  render();
+}
+
+function flipCard() {
+  if (!session || session.flipped) return;
+  session.flipped = true;
+  session.shownAt2 = Date.now();
+  const ref = currentRef();
+  const st = store.get().settings;
+  if (st.tts && st.autoplay && session.deck.settings?.tts && !ref.rev) speak(session.deck, ref.card);
+  render();
+}
+
+/* ========== visninger ========== */
+const app = $("#app");
+
+function viewHome() {
+  const all = decks();
+  const rows = all.map(d => {
+    const c = deckCounts(d);
+    return `<div class="deckrow">
+      <div><strong>${esc(d.title)}</strong><br>
+        <span class="counts">${c.due} til repetisjon · ${c.new} nye tilgjengelige</span></div>
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+        <button class="primary" data-start="${esc(d.id)}" ${c.due + c.new ? "" : "disabled"}>Start økt</button>
+        <button data-startrep="${esc(d.id)}" ${c.due ? "" : "disabled"}>Kun repetisjon</button>
+      </div></div>`;
+  }).join("") || `<p class="muted">Ingen tema lastet ennå.</p>`;
+
+  app.innerHTML = `<h1>Dine tema</h1>${rows}
+    <h2>Legg til tema</h2>
+    <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">
+      <input id="deckurl" placeholder="URL til deck-JSON …" style="max-width:320px">
+      <button id="loadurl">Hent</button>
+      <button id="loadfile">Åpne fil …</button>
+      <input type="file" id="filepick" accept=".json" class="hidden">
+    </div>
+    <p id="loaderr" class="small" style="color:var(--danger)"></p>`;
+
+  app.querySelectorAll("[data-start]").forEach(b => b.onclick = () => startSession(b.dataset.start, true));
+  app.querySelectorAll("[data-startrep]").forEach(b => b.onclick = () => startSession(b.dataset.startrep, false));
+  $("#loadurl").onclick = async () => {
+    try { await loadDeckFromUrl($("#deckurl").value.trim()); render(); }
+    catch (e) { $("#loaderr").textContent = e.message; }
+  };
+  $("#loadfile").onclick = () => $("#filepick").click();
+  $("#filepick").onchange = async (e) => {
+    try { await loadDeckFromFile(e.target.files[0]); render(); }
+    catch (err) { $("#loaderr").textContent = err.message; }
+  };
+}
+
+function cardBadges(ref, state) {
+  const b = [];
+  if (!state || state.due === 0) b.push(`<span class="badge new">ny</span>`);
+  if (ref.rev) b.push(`<span class="badge">omvendt</span>`);
+  if (state && isLeech(state)) b.push(`<span class="badge leech">leech</span>`);
+  return b.join(" ");
+}
+
+function viewSession() {
+  if (!session) { location.hash = "#home"; return; }
+  const ref = currentRef();
+  if (!ref) return viewSummary();
+
+  const { card } = ref;
+  const state = store.get().progress[progressKey(ref.deckId, ref.cardId, ref.rev)];
+  const frontVal = ref.rev ? card.back : card.front;
+  const backVal = ref.rev ? card.front : card.back;
+  const leech = session.leechRef;
+
+  const frontHtml = `<div class="side">${contentHtml(frontVal)}</div>
+    ${card.image && session.flipped ? `<img src="${esc(card.image)}" alt="">` : ""}`;
+  const backHtml = session.flipped ? `
+    <div class="divider"></div>
+    <div class="side">${contentHtml(backVal)}</div>
+    ${card.example ? `<div class="example">${esc(card.example.text)}${card.example.translation ? `<br><span class="small">${esc(card.example.translation)}</span>` : ""}</div>` : ""}
+    ${noteFor(ref) ? `<div class="example">📝 ${esc(noteFor(ref))}</div>` : ""}` : "";
+
+  app.innerHTML = `
+    ${leech ? `<div class="banner">Dette kortet har feilet mange ganger (leech).
+      <button data-leech="suspend">Suspender</button>
+      <button data-leech="keep">Behold</button></div>` : ""}
+    <div class="progressline">${session.idx + 1} / ${session.queue.length} · ${esc(session.deck.title)} ${cardBadges(ref, state)}</div>
+    <div class="card" id="cardface">${frontHtml}${backHtml}</div>
+    ${session.flipped ? `
+      <div class="gradebar">
+        <button class="fail" data-grade="fail">Ikke OK <span class="small">(1)</span></button>
+        <button class="ok" data-grade="ok">OK <span class="small">(3)</span></button>
+      </div>
+      <div class="toolrow">
+        <button data-grade="never" title="Nesten aldri gjenta (0)">nesten aldri</button>
+        ${session.deck.settings?.tts ? `<button id="speakbtn" title="Les opp">🔊</button>` : ""}
+        ${card.hint ? `<button id="hintbtn">vis hint</button>` : ""}
+        ${aiAvailable() ? `<button id="explainbtn">✨ forklar mer</button>` : ""}
+        ${session.undo ? `<button id="undobtn">angre (z)</button>` : ""}
+      </div>
+      <div id="hintbox" class="progressline hidden" style="margin-top:.5rem"></div>
+      <div id="aibox" class="hidden"></div>` : `
+      <div class="progressline">trykk <kbd>mellomrom</kbd> eller klikk for å snu</div>
+      <div class="toolrow">${card.hint ? `<button id="hintbtn">vis hint</button>` : ""}
+        ${session.undo ? `<button id="undobtn">angre (z)</button>` : ""}</div>
+      <div id="hintbox" class="progressline hidden" style="margin-top:.5rem"></div>`}
+    <div class="kbdhint"><kbd>1</kbd>/<kbd>←</kbd> ikke OK · <kbd>3</kbd>/<kbd>→</kbd> OK · <kbd>0</kbd> nesten aldri · <kbd>z</kbd> angre</div>`;
+
+  typeset($("#cardface"));
+  $("#cardface").onclick = flipCard;
+  app.querySelectorAll("[data-grade]").forEach(b => b.onclick = (e) => { e.stopPropagation(); gradeCard(b.dataset.grade); });
+  const hintbtn = $("#hintbtn");
+  if (hintbtn) hintbtn.onclick = (e) => { e.stopPropagation();
+    $("#hintbox").classList.remove("hidden"); $("#hintbox").textContent = card.hint; };
+  const sp = $("#speakbtn"); if (sp) sp.onclick = (e) => { e.stopPropagation(); speak(session.deck, card); };
+  const ub = $("#undobtn"); if (ub) ub.onclick = undoLast;
+  const ex = $("#explainbtn"); if (ex) ex.onclick = () => explainCard(ref);
+  app.querySelectorAll("[data-leech]").forEach(b => b.onclick = () => {
+    if (b.dataset.leech === "suspend") {
+      const key = progressKey(leech.deckId, leech.cardId, leech.rev);
+      store.patch(s => { s.progress[key].suspended = "never"; s.progress[key].due = Date.now() + 180 * DAY; });
+    }
+    session.leechRef = null; render();
+  });
+}
+
+function viewSummary() {
+  const s = session.stats;
+  const pct = s.total ? Math.round(100 * s.ok / s.total) : 0;
+  app.innerHTML = `<h1>Økt ferdig 🎉</h1>
+    <p>${s.total} kort · ${pct} % riktig · ${s.newLearned} nye lært</p>
+    <button class="primary" onclick="location.hash='#home'">Til hjem</button>`;
+  maybeAutoSync();
+  session = null;
+}
+
+function noteFor(ref) {
+  return store.get().meta.notes[progressKey(ref.deckId, ref.cardId, ref.rev)] || "";
+}
+
+/* ---- stubs som fylles i task 5–7 ---- */
+function viewBrowse() { app.innerHTML = `<p class="muted">Kommer …</p>`; }
+function viewStats() { app.innerHTML = `<p class="muted">Kommer …</p>`; }
+function viewSettings() { app.innerHTML = `<p class="muted">Kommer …</p>`; }
+function aiAvailable() { return false; }
+function explainCard() {}
+function maybeAutoSync() {}
+
+/* ========== router & tastatur ========== */
+function currentView() { return (location.hash || "#home").slice(1).split("/")[0]; }
+function render() {
+  const v = currentView();
+  document.querySelectorAll("[data-nav]").forEach(a => a.classList.toggle("active", a.dataset.nav === v));
+  ({ home: viewHome, session: viewSession, browse: viewBrowse,
+     stats: viewStats, settings: viewSettings }[v] || viewHome)();
+  if (v === "session" && session && !session.flipped) session.shownAt = Date.now();
+}
+window.addEventListener("hashchange", render);
+document.addEventListener("keydown", (e) => {
+  if (currentView() !== "session" || !session) return;
+  if (e.target.matches("input,textarea,select")) return;
+  if (e.key === " ") { e.preventDefault(); flipCard(); }
+  else if (session.flipped && (e.key === "1" || e.key === "ArrowLeft")) gradeCard("fail");
+  else if (session.flipped && (e.key === "3" || e.key === "ArrowRight")) gradeCard("ok");
+  else if (session.flipped && (e.key === "0" || e.key === "x")) gradeCard("never");
+  else if (e.key === "z") undoLast();
+});
+
+/* ========== boot ========== */
+await loadBuiltins();
+render();
+</script>
+</body>
+</html>

@@ -1,0 +1,14 @@
+{
+  "id": "russian-basics",
+  "title": "Russisk (stub — erstattes)",
+  "language": { "front": "ru", "back": "en" },
+  "settings": { "tts": true },
+  "lessons": [
+    { "id": "l01", "title": "Test", "cards": [
+      { "id": "voda", "front": "вода", "back": "water", "reverse": true, "tts": "вода",
+        "hint": "Sounds like 'vodka'", "example": { "text": "Я пью воду.", "translation": "I drink water." } },
+      { "id": "var", "front": "$\\operatorname{Var}(aX+b) = ?$", "back": "$a^2\\operatorname{Var}(X)$" },
+      { "id": "tab", "front": "Bøy: быть (presens)", "back": { "html": "<table><tr><td>я</td><td>—</td></tr><tr><td>ты</td><td>—</td></tr></table>" } }
+    ]}
+  ]
+}
