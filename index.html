@@ -4,73 +4,117 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>flash</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
 <style>
 :root {
-  --bg: #fbfaf7; --fg: #1c1c1c; --muted: #767268; --card: #ffffff;
-  --border: #e3e0d8; --accent: #2f6f4f; --danger: #b3402f; --warn: #a06a00;
-  --btn: #f0eee8;
+  --bg: #eef1f4; --fg: #1d2530; --muted: #6e7887; --card: #ffffff;
+  --border: #dbe1e8; --accent: #33689c; --ok: #2f7d4f; --danger: #b3402f;
+  --warn: #a06a00; --btn: #e6eaef;
+  --serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --shadow: 0 1px 2px rgba(29,37,48,.06), 0 6px 18px rgba(29,37,48,.07);
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #16181a; --fg: #e8e6e1; --muted: #9a968d; --card: #1f2225;
-    --border: #33373b; --accent: #6fbf94; --danger: #e07a68; --warn: #d9a441;
-    --btn: #26292d;
+    --bg: #14171c; --fg: #e6e6e2; --muted: #96a0ab; --card: #1d2229;
+    --border: #2e353d; --accent: #6fa7d8; --ok: #5eb37f; --danger: #e0806e;
+    --warn: #d9a441; --btn: #262c34;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 6px 18px rgba(0,0,0,.35);
   }
 }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--bg); color: var(--fg);
-  font: 17px/1.5 system-ui, -apple-system, sans-serif; }
-header { display: flex; gap: 1rem; align-items: baseline; padding: .7rem 1rem;
-  border-bottom: 1px solid var(--border); flex-wrap: wrap; }
-header .logo { font-weight: 700; letter-spacing: .02em; }
-header a { color: var(--muted); text-decoration: none; }
-header a.active, header a:hover { color: var(--fg); }
-main { max-width: 720px; margin: 0 auto; padding: 1rem; }
-h1 { font-size: 1.3rem; } h2 { font-size: 1.1rem; }
+  font: 16px/1.5 system-ui, -apple-system, sans-serif; }
+header { display: flex; gap: .9rem; align-items: baseline; padding: .65rem 1rem;
+  flex-wrap: wrap; }
+header .logo { font-weight: 700; letter-spacing: .02em; margin-right: .3rem; }
+header a { color: var(--muted); text-decoration: none; font-size: .95rem;
+  padding-bottom: 2px; border-bottom: 2px solid transparent; }
+header a.active { color: var(--fg); border-bottom-color: var(--accent); }
+header a:hover { color: var(--fg); }
+main { max-width: 720px; margin: 0 auto; padding: .6rem 1rem 2rem; }
+h1 { font-size: 1.25rem; } h2 { font-size: 1.05rem; margin-top: 1.6rem; }
 button { font: inherit; border: 1px solid var(--border); background: var(--btn);
-  color: var(--fg); border-radius: 8px; padding: .45rem .9rem; cursor: pointer; }
+  color: var(--fg); border-radius: 9px; padding: .45rem .9rem; cursor: pointer; }
 button:hover { border-color: var(--muted); }
 button.primary { background: var(--accent); color: #fff; border-color: transparent; }
 button.danger { color: var(--danger); }
+button.linkish { border: none; background: none; color: var(--muted);
+  text-decoration: underline; padding: .3rem .2rem; font-size: .88rem; }
+.iconbtn { border: none; background: none; padding: .35rem .5rem; font-size: 1.15rem;
+  line-height: 1; border-radius: 8px; }
+.iconbtn:hover { background: var(--btn); border: none; }
 input, select, textarea { font: inherit; background: var(--card); color: var(--fg);
   border: 1px solid var(--border); border-radius: 6px; padding: .35rem .5rem; width: 100%; }
 label { display: block; margin: .7rem 0 .15rem; color: var(--muted); font-size: .9rem; }
-.deckrow { display: flex; justify-content: space-between; align-items: center; gap: .8rem;
-  padding: .8rem; border: 1px solid var(--border); border-radius: 10px; margin: .6rem 0;
-  background: var(--card); flex-wrap: wrap; }
-.deckrow .counts { color: var(--muted); font-size: .9rem; }
 .muted { color: var(--muted); } .small { font-size: .85rem; }
-/* Kort */
-.card { background: var(--card); border: 1px solid var(--border); border-radius: 14px;
-  padding: 2rem 1.4rem; margin: 1rem 0; min-height: 220px; display: flex;
+.hidden { display: none; }
+
+/* Hjem: tema-fliser */
+.deckgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: .8rem; margin: .8rem 0; }
+.decktile { background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+  padding: 1rem 1.1rem; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: .55rem; }
+.decktile h3 { margin: 0; font-family: var(--serif); font-size: 1.15rem; font-weight: 600; }
+.pills { display: flex; gap: .45rem; flex-wrap: wrap; }
+.pill { font-size: .82rem; padding: .12rem .55rem; border-radius: 99px;
+  background: var(--btn); color: var(--muted); cursor: default; }
+.pill.hot { background: color-mix(in srgb, var(--accent) 14%, var(--btn)); color: var(--fg); }
+.tilebtns { display: flex; gap: .5rem; align-items: center; margin-top: auto; }
+.addrow { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; }
+
+/* Økt */
+.smeta { display: flex; justify-content: space-between; align-items: center;
+  gap: .6rem; color: var(--muted); font-size: .88rem; }
+.smeta .deckname { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.smeta .right { display: flex; align-items: center; gap: .35rem; flex-shrink: 0; }
+.pbar { height: 4px; background: var(--border); border-radius: 99px; overflow: hidden;
+  margin: .45rem 0 1rem; }
+.pbar > div { height: 100%; background: var(--accent); transition: width .25s ease; }
+.cardwrap { position: relative; margin: 0 0 1.1rem; }
+.cardwrap::before, .cardwrap::after { content: ""; position: absolute; inset: 0;
+  background: var(--card); border: 1px solid var(--border); border-radius: 16px; z-index: 0; }
+.cardwrap::before { transform: translateY(10px) scale(.955); opacity: .5; }
+.cardwrap::after { transform: translateY(5px) scale(.978); opacity: .8; }
+.card { position: relative; z-index: 1; background: var(--card);
+  border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow);
+  padding: 2.3rem 1.5rem 1.6rem; min-height: 230px; display: flex;
   flex-direction: column; justify-content: center; text-align: center; cursor: pointer; }
-.card .side { font-size: 1.5rem; overflow-x: auto; }
+.card .side { font-family: var(--serif); font-size: 1.55rem; line-height: 1.35; overflow-x: auto; }
 .card .side table { margin: .5rem auto; border-collapse: collapse; font-size: 1.05rem; }
 .card .side td, .card .side th { border: 1px solid var(--border); padding: .25rem .6rem; }
 .card img { max-width: 100%; max-height: 220px; border-radius: 8px; margin: .5rem auto; }
+.card .answer { animation: reveal .22s ease-out; }
 .card .example { margin-top: 1rem; padding-top: .8rem; border-top: 1px dashed var(--border);
-  font-size: 1.05rem; color: var(--muted); }
-.card .divider { border-top: 1px solid var(--border); margin: 1rem 0; }
-.gradebar { display: flex; gap: .6rem; justify-content: center; margin: .8rem 0; flex-wrap: wrap; }
-.gradebar button { min-width: 7.5rem; padding: .8rem .8rem; font-size: 1.05rem; }
-.gradebar .fail { border-color: var(--danger); }
-.gradebar .ok { background: var(--accent); color: #fff; border-color: transparent; }
-.toolrow { display: flex; gap: .6rem; justify-content: center; color: var(--muted); flex-wrap: wrap; }
-.toolrow button { border: none; background: none; color: var(--muted); padding: .3rem .5rem; }
+  font-family: var(--serif); font-size: 1.05rem; color: var(--muted); }
+.card .divider { border-top: 1px solid var(--border); margin: 1.1rem 0; }
+.ghost { margin: 1.4rem auto 0; border: 1px dashed var(--border); background: none;
+  color: var(--muted); font-size: .85rem; padding: .3rem .9rem; border-radius: 99px; }
+@keyframes reveal { from { opacity: 0; transform: translateY(7px); } }
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}
+.gradebar { display: flex; gap: .7rem; justify-content: center; margin: .2rem 0 .5rem; }
+.gradebar button { min-width: 8.5rem; padding: .8rem .8rem; font-size: 1.02rem;
+  border-radius: 12px; }
+.gradebar .fail { border-color: color-mix(in srgb, var(--danger) 55%, var(--border));
+  color: var(--danger); background: var(--card); }
+.gradebar .ok { background: var(--ok); color: #fff; border-color: transparent; }
+.toolrow { display: flex; gap: .3rem; justify-content: center; flex-wrap: wrap; }
 .badge { font-size: .72rem; padding: .1rem .45rem; border-radius: 99px;
-  border: 1px solid var(--border); color: var(--muted); vertical-align: middle; }
-.badge.new { color: var(--accent); border-color: var(--accent); }
+  border: 1px solid var(--border); color: var(--muted); vertical-align: middle; cursor: default; }
+.badge.new { color: var(--ok); border-color: var(--ok); }
 .badge.leech { color: var(--danger); border-color: var(--danger); }
 .banner { border: 1px solid var(--warn); border-radius: 10px; padding: .7rem .9rem;
   margin: .8rem 0; background: color-mix(in srgb, var(--warn) 8%, var(--card)); }
 .progressline { color: var(--muted); font-size: .9rem; text-align: center; }
-.kbdhint { text-align: center; color: var(--muted); font-size: .8rem; margin-top: 1.2rem; }
 kbd { border: 1px solid var(--border); border-radius: 4px; padding: 0 .3rem; font-size: .85em; }
-.hidden { display: none; }
-@media (hover: none) and (pointer: coarse) { .kbdhint { display: none; } }
+
+/* Bla / statistikk */
 .lesson { margin: 1rem 0; }
 .lesson h3 { margin: .3rem 0; font-size: 1rem; }
 .cardlist { width: 100%; border-collapse: collapse; font-size: .92rem; }
@@ -287,23 +331,26 @@ const app = $("#app");
 
 function viewHome() {
   const all = decks();
-  const rows = all.map(d => {
+  const tiles = all.map(d => {
     const c = deckCounts(d);
-    return `<div class="deckrow">
-      <div><strong>${esc(d.title)}</strong><br>
-        <span class="counts">${c.due} til repetisjon · ${c.new} nye tilgjengelige</span></div>
-      <div style="display:flex;gap:.5rem;flex-wrap:wrap">
-        <button class="primary" data-start="${esc(d.id)}" ${c.due + c.new ? "" : "disabled"}>Start økt</button>
-        <button data-startrep="${esc(d.id)}" ${c.due ? "" : "disabled"}>Kun repetisjon</button>
+    return `<div class="decktile">
+      <h3>${esc(d.title)}</h3>
+      <div class="pills">
+        <span class="pill ${c.due ? "hot" : ""}" title="kort til repetisjon">🔁 ${c.due}</span>
+        <span class="pill" title="nye kort tilgjengelig i dag">🌱 ${c.new}</span>
+      </div>
+      <div class="tilebtns">
+        <button class="primary" data-start="${esc(d.id)}" ${c.due + c.new ? "" : "disabled"}>▶ Start</button>
+        <button class="linkish" data-startrep="${esc(d.id)}" ${c.due ? "" : "disabled"}
+          title="bare kort som er til forfall">kun repetisjon</button>
       </div></div>`;
   }).join("") || `<p class="muted">Ingen tema lastet ennå.</p>`;
 
-  app.innerHTML = `<h1>Dine tema</h1>${rows}
-    <h2>Legg til tema</h2>
-    <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">
-      <input id="deckurl" placeholder="URL til deck-JSON …" style="max-width:320px">
-      <button id="loadurl">Hent</button>
-      <button id="loadfile">Åpne fil …</button>
+  app.innerHTML = `<h1>Dine tema</h1><div class="deckgrid">${tiles}</div>
+    <div class="addrow">
+      <input id="deckurl" placeholder="Legg til tema fra URL …" style="max-width:300px">
+      <button id="loadurl" class="iconbtn" title="Hent fra URL">🔗</button>
+      <button id="loadfile" class="iconbtn" title="Åpne JSON-fil">📄</button>
       <input type="file" id="filepick" accept=".json" class="hidden">
     </div>
     <p id="loaderr" class="small" style="color:var(--danger)"></p>`;
@@ -323,9 +370,9 @@ function viewHome() {
 
 function cardBadges(ref, state) {
   const b = [];
-  if (!state || state.due === 0) b.push(`<span class="badge new">ny</span>`);
-  if (ref.rev) b.push(`<span class="badge">omvendt</span>`);
-  if (state && isLeech(state)) b.push(`<span class="badge leech">leech</span>`);
+  if (!state || state.due === 0) b.push(`<span class="badge new" title="nytt kort">ny</span>`);
+  if (ref.rev) b.push(`<span class="badge" title="speilkort: svar → spørsmål">⇄</span>`);
+  if (state && isLeech(state)) b.push(`<span class="badge leech" title="feiler ofte — vurder å omskrive">leech</span>`);
   return b.join(" ");
 }
 
@@ -340,39 +387,48 @@ function viewSession() {
   const backVal = ref.rev ? card.front : card.back;
   const leech = session.leechRef;
 
+  const pct = Math.round(100 * session.idx / session.queue.length);
   const frontHtml = `<div class="side">${contentHtml(frontVal)}</div>
     ${card.image && session.flipped ? `<img src="${esc(card.image)}" alt="">` : ""}`;
-  const backHtml = session.flipped ? `
+  const backHtml = session.flipped ? `<div class="answer">
     <div class="divider"></div>
     <div class="side">${contentHtml(backVal)}</div>
     ${card.example ? `<div class="example">${esc(card.example.text)}${card.example.translation ? `<br><span class="small">${esc(card.example.translation)}</span>` : ""}</div>` : ""}
-    ${noteFor(ref) ? `<div class="example">📝 ${esc(noteFor(ref))}</div>` : ""}` : "";
+    ${noteFor(ref) ? `<div class="example">📝 ${esc(noteFor(ref))}</div>` : ""}</div>`
+    : `<button class="ghost" id="flipbtn" title="mellomrom eller →">vis svar</button>`;
 
   app.innerHTML = `
     ${leech ? `<div class="banner">Dette kortet har feilet mange ganger (leech).
       <button data-leech="suspend">Suspender</button>
       <button data-leech="keep">Behold</button></div>` : ""}
-    <div class="progressline">${session.idx + 1} / ${session.queue.length} · ${esc(session.deck.title)} ${cardBadges(ref, state)}</div>
-    <div class="card" id="cardface">${frontHtml}${backHtml}</div>
+    <div class="smeta">
+      <span class="deckname">${esc(session.deck.title)}</span>
+      <span class="right">${cardBadges(ref, state)}
+        <span>${session.idx + 1} av ${session.queue.length}</span>
+        <span class="iconbtn" style="cursor:help" title="mellomrom/→ = snu, så OK · ← eller 1 = ikke OK · 3 = OK · 0 = nesten aldri gjenta · z = angre">⌨</span>
+      </span>
+    </div>
+    <div class="pbar"><div style="width:${pct}%"></div></div>
+    <div class="cardwrap"><div class="card" id="cardface">${frontHtml}${backHtml}</div></div>
     ${session.flipped ? `
       <div class="gradebar">
-        <button class="fail" data-grade="fail">Ikke OK <span class="small">(1)</span></button>
-        <button class="ok" data-grade="ok">OK <span class="small">(3)</span></button>
+        <button class="fail" data-grade="fail" title="← eller 1">✕ Ikke OK</button>
+        <button class="ok" data-grade="ok" title="mellomrom, → eller 3">✓ OK</button>
       </div>
       <div class="toolrow">
-        <button data-grade="never" title="Nesten aldri gjenta (0)">nesten aldri</button>
-        ${session.deck.settings?.tts ? `<button id="speakbtn" title="Les opp">🔊</button>` : ""}
-        ${card.hint ? `<button id="hintbtn">vis hint</button>` : ""}
-        ${aiAvailable() ? `<button id="explainbtn">✨ forklar mer</button>` : ""}
-        ${session.undo ? `<button id="undobtn">angre (z)</button>` : ""}
+        <button class="iconbtn" data-grade="never" title="Nesten aldri gjenta (0)">💤</button>
+        ${session.deck.settings?.tts ? `<button class="iconbtn" id="speakbtn" title="Les opp">🔊</button>` : ""}
+        ${card.hint ? `<button class="iconbtn" id="hintbtn" title="Vis hint">💡</button>` : ""}
+        ${aiAvailable() ? `<button class="iconbtn" id="explainbtn" title="Forklar mer (KI)">✨</button>` : ""}
+        ${session.undo ? `<button class="iconbtn" id="undobtn" title="Angre siste svar (z)">↩</button>` : ""}
       </div>
       <div id="hintbox" class="progressline hidden" style="margin-top:.5rem"></div>
       <div id="aibox" class="hidden"></div>` : `
-      <div class="progressline">trykk <kbd>mellomrom</kbd> eller klikk for å snu</div>
-      <div class="toolrow">${card.hint ? `<button id="hintbtn">vis hint</button>` : ""}
-        ${session.undo ? `<button id="undobtn">angre (z)</button>` : ""}</div>
-      <div id="hintbox" class="progressline hidden" style="margin-top:.5rem"></div>`}
-    <div class="kbdhint"><kbd>mellomrom</kbd>/<kbd>→</kbd> snu → OK · <kbd>←</kbd>/<kbd>1</kbd> ikke OK · <kbd>0</kbd> nesten aldri · <kbd>z</kbd> angre</div>`;
+      <div class="toolrow">
+        ${card.hint ? `<button class="iconbtn" id="hintbtn" title="Vis hint">💡</button>` : ""}
+        ${session.undo ? `<button class="iconbtn" id="undobtn" title="Angre siste svar (z)">↩</button>` : ""}
+      </div>
+      <div id="hintbox" class="progressline hidden" style="margin-top:.5rem"></div>`}`;
 
   typeset($("#cardface"));
   $("#cardface").onclick = flipCard;
@@ -395,9 +451,16 @@ function viewSession() {
 function viewSummary() {
   const s = session.stats;
   const pct = s.total ? Math.round(100 * s.ok / s.total) : 0;
-  app.innerHTML = `<h1>Økt ferdig 🎉</h1>
-    <p>${s.total} kort · ${pct} % riktig · ${s.newLearned} nye lært</p>
-    <button class="primary" onclick="location.hash='#home'">Til hjem</button>`;
+  app.innerHTML = `
+    <div class="cardwrap" style="margin-top:1.4rem"><div class="card" style="cursor:default">
+      <div class="side">🎉</div>
+      <div class="pills" style="justify-content:center;margin-top:1rem">
+        <span class="pill" title="kort besvart">📇 ${s.total}</span>
+        <span class="pill" title="andel riktig">✓ ${pct} %</span>
+        <span class="pill" title="nye kort lært">🌱 ${s.newLearned}</span>
+      </div>
+    </div></div>
+    <p style="text-align:center"><button class="primary" onclick="location.hash='#home'">Til hjem</button></p>`;
   maybeAutoSync();
   session = null;
 }
