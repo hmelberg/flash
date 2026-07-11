@@ -11,7 +11,7 @@ Fleksibel flashcard-app med spaced repetition. Statisk — ingen server, ingen b
 
 ## Bruk
 
-- **Økt:** mellomrom/klikk snur kortet. <kbd>1</kbd>/<kbd>←</kbd> ikke OK · <kbd>3</kbd>/<kbd>→</kbd> OK · <kbd>0</kbd> nesten aldri gjenta · <kbd>z</kbd> angre.
+- **Økt:** mellomrom/klikk/piler snur kortet; deretter <kbd>mellomrom</kbd>/<kbd>→</kbd>/<kbd>3</kbd> = OK, <kbd>←</kbd>/<kbd>1</kbd> = ikke OK, <kbd>0</kbd> = nesten aldri gjenta, <kbd>z</kbd> = angre. Rask flyt: space-space per kort du kan (→→ / →← med pilene).
 - Svartid brukes automatisk: trege OK-svar får forsiktigere intervaller, raske får litt ekstra.
 - Nye kort kommer fra tidligste uferdige leksjon (kumulativ oppbygging); neste leksjon åpner ved ~80 % mestring, men kan alltid låses opp manuelt under «Bla».
 - Kort som feiler ≥8 ganger flagges som *leech* — omskriv eller suspender dem.

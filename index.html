@@ -70,6 +70,7 @@ label { display: block; margin: .7rem 0 .15rem; color: var(--muted); font-size: 
 .kbdhint { text-align: center; color: var(--muted); font-size: .8rem; margin-top: 1.2rem; }
 kbd { border: 1px solid var(--border); border-radius: 4px; padding: 0 .3rem; font-size: .85em; }
 .hidden { display: none; }
+@media (hover: none) and (pointer: coarse) { .kbdhint { display: none; } }
 .lesson { margin: 1rem 0; }
 .lesson h3 { margin: .3rem 0; font-size: 1rem; }
 .cardlist { width: 100%; border-collapse: collapse; font-size: .92rem; }
@@ -274,6 +275,7 @@ function flipCard() {
   if (!session || session.flipped) return;
   session.flipped = true;
   session.shownAt2 = Date.now();
+  session.flipGuardUntil = Date.now() + 300; // hindrer at dobbelttrykk graderer ved uhell
   const ref = currentRef();
   const st = store.get().settings;
   if (st.tts && st.autoplay && session.deck.settings?.tts && !ref.rev) speak(session.deck, ref.card);
@@ -370,7 +372,7 @@ function viewSession() {
       <div class="toolrow">${card.hint ? `<button id="hintbtn">vis hint</button>` : ""}
         ${session.undo ? `<button id="undobtn">angre (z)</button>` : ""}</div>
       <div id="hintbox" class="progressline hidden" style="margin-top:.5rem"></div>`}
-    <div class="kbdhint"><kbd>1</kbd>/<kbd>←</kbd> ikke OK · <kbd>3</kbd>/<kbd>→</kbd> OK · <kbd>0</kbd> nesten aldri · <kbd>z</kbd> angre</div>`;
+    <div class="kbdhint"><kbd>mellomrom</kbd>/<kbd>→</kbd> snu → OK · <kbd>←</kbd>/<kbd>1</kbd> ikke OK · <kbd>0</kbd> nesten aldri · <kbd>z</kbd> angre</div>`;
 
   typeset($("#cardface"));
   $("#cardface").onclick = flipCard;
@@ -943,11 +945,22 @@ function render() {
 window.addEventListener("hashchange", render);
 document.addEventListener("keydown", (e) => {
   if (currentView() !== "session" || !session) return;
-  if (e.target.matches("input,textarea,select")) return;
-  if (e.key === " ") { e.preventDefault(); flipCard(); }
-  else if (session.flipped && (e.key === "1" || e.key === "ArrowLeft")) gradeCard("fail");
-  else if (session.flipped && (e.key === "3" || e.key === "ArrowRight")) gradeCard("ok");
-  else if (session.flipped && (e.key === "0" || e.key === "x")) gradeCard("never");
+  if (e.target instanceof Element && e.target.matches("input,textarea,select")) return;
+  const flipKeys = [" ", "ArrowRight", "ArrowLeft"];
+  if (flipKeys.includes(e.key)) e.preventDefault();
+  if (!session.flipped) {
+    // forsiden: space og begge piler snur — så →→ = OK og →← = ikke OK
+    if (flipKeys.includes(e.key)) flipCard();
+    else if (e.key === "z") undoLast();
+    return;
+  }
+  // baksiden: space/→ = OK, ← = ikke OK. Kort sperre etter snuing mot dobbelttrykk.
+  const guarded = Date.now() < (session.flipGuardUntil || 0);
+  if ((e.key === " " || e.key === "ArrowRight") && !guarded) gradeCard("ok");
+  else if (e.key === "ArrowLeft" && !guarded) gradeCard("fail");
+  else if (e.key === "3") gradeCard("ok");
+  else if (e.key === "1") gradeCard("fail");
+  else if (e.key === "0" || e.key === "x") gradeCard("never");
   else if (e.key === "z") undoLast();
 });
 
