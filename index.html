@@ -1061,6 +1061,23 @@ async function fetchPrompt(path, fallback) {
   }
   return promptCache[path] || fallback;
 }
+// PDF-tekst: pdf.js lastes fra CDN først når en PDF velges
+let pdfjsLib = null;
+async function extractPdfText(file) {
+  if (!pdfjsLib) {
+    pdfjsLib = await import("https://cdn.jsdelivr.net/npm/pdfjs-dist@4.6.82/build/pdf.min.mjs");
+    pdfjsLib.GlobalWorkerOptions.workerSrc =
+      "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.6.82/build/pdf.worker.min.mjs";
+  }
+  const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
+  const pages = [];
+  for (let p = 1; p <= pdf.numPages; p++) {
+    const tc = await (await pdf.getPage(p)).getTextContent();
+    pages.push(tc.items.map(i => i.str).join(" "));
+  }
+  return pages.join("\n\n");
+}
+
 const GEN_FALLBACK = "You create high-quality flashcards as JSON {lessons:[{id,title,note,cards:[{id,front,back,hint,example,tts,reverse}]}]}. One atomic fact per card; cloze with ___ where helpful; $...$ for math; vocabulary cards get reverse=true, plain tts and a short example sentence with translation; about 100 cards in lessons of 8-14 unless told otherwise.";
 const EXTRACT_FALLBACK = "A source document is provided: extract flashcards covering its most important content, importance-first, mirroring the document's structure as lessons. Do not invent facts not in the document. Default about 1 card per 100 words.";
 
@@ -1073,9 +1090,9 @@ function generateDialog(defaultDeckId) {
     <label>Hva skal kortene handle om?</label><input id="g-topic" placeholder="f.eks. russiske verb for bevegelse — eller vinkling på dokumentet under">
     <label>Dokument (valgfritt — kortene trekkes da ut av innholdet)</label>
     <textarea id="g-doc" rows="4" placeholder="Lim inn tekst her …"></textarea>
-    <div class="addrow"><button type="button" id="g-docfile" class="linkish">📄 hent fra fil (.txt/.md)</button>
+    <div class="addrow"><button type="button" id="g-docfile" class="linkish">📄 hent fra fil (.txt/.md/.pdf)</button>
       <span id="g-doccount" class="muted small"></span>
-      <input type="file" id="g-docpick" accept=".txt,.md,.markdown,text/plain" class="hidden"></div>
+      <input type="file" id="g-docpick" accept=".txt,.md,.markdown,.pdf,text/plain,application/pdf" class="hidden"></div>
     <label>Antall</label><input id="g-count" type="number" min="1" max="150" placeholder="ca 100" style="max-width:6.5rem">
     <label>Nivå</label><input id="g-level" placeholder="f.eks. nybegynner">
     <label>Ekstra instruks (valgfritt)</label><textarea id="g-extra" rows="2"></textarea>
@@ -1117,7 +1134,19 @@ function generateDialog(defaultDeckId) {
   $("#g-docfile", dlg).onclick = () => $("#g-docpick", dlg).click();
   $("#g-docpick", dlg).onchange = async (e) => {
     const f = e.target.files[0];
-    if (f) { $("#g-doc", dlg).value = await f.text(); updateDocInfo(); }
+    if (!f) return;
+    try {
+      if (f.type === "application/pdf" || /\.pdf$/i.test(f.name)) {
+        $("#g-doccount", dlg).textContent = "Leser PDF …";
+        $("#g-doc", dlg).value = await extractPdfText(f);
+      } else {
+        $("#g-doc", dlg).value = await f.text();
+      }
+    } catch (err) {
+      $("#g-doccount", dlg).textContent = "Kunne ikke lese fila: " + err.message;
+      return;
+    }
+    updateDocInfo();
   };
 
   $("#g-run", dlg).onclick = async () => {
