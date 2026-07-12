@@ -97,7 +97,7 @@
       "cards": [
         {
           "id": "privet",
-          "front": "привет",
+          "front": "приве́т",
           "back": "hi (informal)",
           "reverse": true,
           "tts": "привет",
@@ -108,7 +108,7 @@
         },
         {
           "id": "zdravstvujte",
-          "front": "здравствуйте",
+          "front": "здра́вствуйте",
           "back": "hello (formal)",
           "reverse": true,
           "tts": "здравствуйте",
@@ -116,21 +116,21 @@
         },
         {
           "id": "dobroe-utro",
-          "front": "доброе утро",
+          "front": "до́брое у́тро",
           "back": "good morning",
           "reverse": true,
           "tts": "доброе утро"
         },
         {
           "id": "dobryj-den",
-          "front": "добрый день",
+          "front": "до́брый день",
           "back": "good afternoon",
           "reverse": true,
           "tts": "добрый день"
         },
         {
           "id": "spasibo",
-          "front": "спасибо",
+          "front": "спаси́бо",
           "back": "thank you",
           "reverse": true,
           "tts": "спасибо",
@@ -141,7 +141,7 @@
         },
         {
           "id": "pozhalujsta",
-          "front": "пожалуйста",
+          "front": "пожа́луйста",
           "back": "please / you're welcome",
           "reverse": true,
           "tts": "пожалуйста",
@@ -155,21 +155,21 @@
         },
         {
           "id": "izvinite",
-          "front": "извините",
+          "front": "извини́те",
           "back": "excuse me / sorry (formal)",
           "reverse": true,
           "tts": "извините"
         },
         {
           "id": "poka",
-          "front": "пока",
+          "front": "пока́",
           "back": "bye (informal)",
           "reverse": true,
           "tts": "пока"
         },
         {
           "id": "do-svidanija",
-          "front": "до свидания",
+          "front": "до свида́ния",
           "back": "goodbye (formal)",
           "reverse": true,
           "tts": "до свидания",
@@ -177,7 +177,7 @@
         },
         {
           "id": "kak-dela",
-          "front": "Как дела?",
+          "front": "Как дела́?",
           "back": "How are things?",
           "reverse": true,
           "tts": "как дела",
@@ -188,7 +188,7 @@
         },
         {
           "id": "menya-zovut",
-          "front": "Меня зовут…",
+          "front": "Меня́ зову́т…",
           "back": "My name is…",
           "reverse": true,
           "tts": "меня зовут",
@@ -217,7 +217,7 @@
         },
         {
           "id": "on-ona",
-          "front": "он / она / оно",
+          "front": "он / она́ / оно́",
           "back": "he / she / it",
           "tts": "он, она, оно"
         },
@@ -237,7 +237,7 @@
         },
         {
           "id": "oni",
-          "front": "они",
+          "front": "они́",
           "back": "they",
           "reverse": true,
           "tts": "они"
@@ -245,12 +245,12 @@
         {
           "id": "byt-present",
           "front": "How do you say «I am a student» in Russian?",
-          "back": "Я студент — the verb 'to be' is dropped in the present tense",
+          "back": "Я студе́нт — the verb 'to be' is dropped in the present tense",
           "tts": "я студент"
         },
         {
           "id": "eto",
-          "front": "это",
+          "front": "э́то",
           "back": "this (is) / it (is)",
           "tts": "это",
           "example": {
@@ -302,7 +302,7 @@
         },
         {
           "id": "voda",
-          "front": "вода",
+          "front": "вода́",
           "back": "water (f)",
           "reverse": true,
           "tts": "вода",
@@ -313,14 +313,14 @@
         },
         {
           "id": "okno",
-          "front": "окно",
+          "front": "окно́",
           "back": "window (n)",
           "reverse": true,
           "tts": "окно"
         },
         {
           "id": "kniga",
-          "front": "книга",
+          "front": "кни́га",
           "back": "book (f)",
           "reverse": true,
           "tts": "книга",
@@ -338,14 +338,14 @@
         },
         {
           "id": "mama-papa",
-          "front": "мама / папа",
+          "front": "ма́ма / па́па",
           "back": "mom / dad (папа is masculine despite -а!)",
           "tts": "мама, папа",
           "hint": "Natural gender beats the ending"
         },
         {
           "id": "gorod",
-          "front": "город",
+          "front": "го́род",
           "back": "city (m)",
           "reverse": true,
           "tts": "город",
@@ -367,8 +367,8 @@
         },
         {
           "id": "gender-quiz",
-          "front": "Gender of: машина, море, чай?",
-          "back": "машина — f (-а), море — n (-е), чай — m (ends in й)",
+          "front": "Gender of: маши́на, мо́ре, чай?",
+          "back": "маши́на — f (-а), мо́ре — n (-е), чай — m (ends in й)",
           "tts": "машина, море, чай"
         }
       ]
@@ -379,28 +379,28 @@
       "cards": [
         {
           "id": "n1-3",
-          "front": "один, два, три",
+          "front": "оди́н, два, три",
           "back": "1, 2, 3",
           "reverse": true,
           "tts": "один, два, три"
         },
         {
           "id": "n4-6",
-          "front": "четыре, пять, шесть",
+          "front": "четы́ре, пять, шесть",
           "back": "4, 5, 6",
           "reverse": true,
           "tts": "четыре, пять, шесть"
         },
         {
           "id": "n7-9",
-          "front": "семь, восемь, девять",
+          "front": "семь, во́семь, де́вять",
           "back": "7, 8, 9",
           "reverse": true,
           "tts": "семь, восемь, девять"
         },
         {
           "id": "n10",
-          "front": "десять",
+          "front": "де́сять",
           "back": "10",
           "reverse": true,
           "tts": "десять"
@@ -408,12 +408,12 @@
         {
           "id": "n11-teens",
           "front": "How are 11–19 formed?",
-          "back": "Number + -надцать: одиннадцать (11), двенадцать (12) …",
+          "back": "Number + -надцать: оди́ннадцать (11), двена́дцать (12) …",
           "tts": "одиннадцать, двенадцать"
         },
         {
           "id": "n20-40",
-          "front": "двадцать / тридцать / сорок",
+          "front": "два́дцать / три́дцать / со́рок",
           "back": "20 / 30 / 40",
           "reverse": true,
           "tts": "двадцать, тридцать, сорок",
@@ -421,7 +421,7 @@
         },
         {
           "id": "n50-90",
-          "front": "пятьдесят / шестьдесят … девяносто",
+          "front": "пятьдеся́т / шестьдеся́т … девяно́сто",
           "back": "50 / 60 … 90 (девяносто is irregular)",
           "tts": "пятьдесят, девяносто"
         },
@@ -435,12 +435,12 @@
         {
           "id": "n-compose",
           "front": "How do you say 47?",
-          "back": "сорок семь — tens + units, no 'and'",
+          "back": "со́рок семь — tens + units, no 'and'",
           "tts": "сорок семь"
         },
         {
           "id": "skolko",
-          "front": "Сколько?",
+          "front": "Ско́лько?",
           "back": "How much? / How many?",
           "reverse": true,
           "tts": "сколько",
@@ -458,17 +458,17 @@
       "cards": [
         {
           "id": "chitat-conj",
-          "front": "Conjugate: читать (to read), present",
+          "front": "Conjugate: чита́ть (to read), present",
           "back": {
-            "html": "<table><tr><td>я</td><td>чита<b>ю</b></td></tr><tr><td>ты</td><td>чита<b>ешь</b></td></tr><tr><td>он/она</td><td>чита<b>ет</b></td></tr><tr><td>мы</td><td>чита<b>ем</b></td></tr><tr><td>вы</td><td>чита<b>ете</b></td></tr><tr><td>они</td><td>чита<b>ют</b></td></tr></table>"
+            "html": "<table><tr><td>я</td><td>чита́<b>ю</b></td></tr><tr><td>ты</td><td>чита́<b>ешь</b></td></tr><tr><td>он/она</td><td>чита́<b>ет</b></td></tr><tr><td>мы</td><td>чита́<b>ем</b></td></tr><tr><td>вы</td><td>чита́<b>ете</b></td></tr><tr><td>они</td><td>чита́<b>ют</b></td></tr></table>"
           },
           "tts": "читаю, читаешь, читает"
         },
         {
           "id": "govorit-conj",
-          "front": "Conjugate: говорить (to speak), present",
+          "front": "Conjugate: говори́ть (to speak), present",
           "back": {
-            "html": "<table><tr><td>я</td><td>говор<b>ю</b></td></tr><tr><td>ты</td><td>говор<b>ишь</b></td></tr><tr><td>он/она</td><td>говор<b>ит</b></td></tr><tr><td>мы</td><td>говор<b>им</b></td></tr><tr><td>вы</td><td>говор<b>ите</b></td></tr><tr><td>они</td><td>говор<b>ят</b></td></tr></table>"
+            "html": "<table><tr><td>я</td><td>говор<b>ю́</b></td></tr><tr><td>ты</td><td>говор<b>и́шь</b></td></tr><tr><td>он/она</td><td>говор<b>и́т</b></td></tr><tr><td>мы</td><td>говор<b>и́м</b></td></tr><tr><td>вы</td><td>говор<b>и́те</b></td></tr><tr><td>они</td><td>говор<b>я́т</b></td></tr></table>"
           },
           "tts": "говорю, говоришь, говорит"
         },
@@ -485,7 +485,7 @@
         },
         {
           "id": "rabotat",
-          "front": "работать",
+          "front": "рабо́тать",
           "back": "to work",
           "reverse": true,
           "tts": "работать",
@@ -518,7 +518,7 @@
         },
         {
           "id": "idti",
-          "front": "идти",
+          "front": "идти́",
           "back": "to go (on foot)",
           "reverse": true,
           "tts": "идти",
@@ -540,7 +540,7 @@
         },
         {
           "id": "ponimat",
-          "front": "понимать",
+          "front": "понима́ть",
           "back": "to understand",
           "reverse": true,
           "tts": "понимать",
@@ -552,7 +552,7 @@
         {
           "id": "cloze-zhivu",
           "front": "Я ___ в Москве. (жить)",
-          "back": "живу",
+          "back": "живу́",
           "tts": "живу",
           "example": {
             "text": "Я живу в Москве.",
@@ -562,7 +562,7 @@
         {
           "id": "cloze-govorit",
           "front": "Она ___ по-английски. (говорить)",
-          "back": "говорит",
+          "back": "говори́т",
           "tts": "говорит",
           "example": {
             "text": "Она говорит по-английски.",
@@ -585,13 +585,13 @@
         {
           "id": "acc-fem",
           "front": "Accusative of feminine nouns in -а?",
-          "back": "-а → -у: книга → книгу, вода → воду",
+          "back": "-а → -у: кни́га → кни́гу, вода́ → во́ду",
           "tts": "книгу, воду"
         },
         {
           "id": "cloze-knigu",
           "front": "Я читаю ___. (книга)",
-          "back": "книгу",
+          "back": "кни́гу",
           "tts": "книгу",
           "example": {
             "text": "Я читаю книгу.",
@@ -601,7 +601,7 @@
         {
           "id": "cloze-vodu",
           "front": "Он пьёт ___. (вода)",
-          "back": "воду",
+          "back": "во́ду",
           "tts": "воду",
           "example": {
             "text": "Он пьёт воду.",
@@ -611,19 +611,19 @@
         {
           "id": "acc-masc-inanimate",
           "front": "Accusative of masculine inanimate nouns?",
-          "back": "Same as nominative: Я вижу дом (no change)",
+          "back": "Same as nominative: Я ви́жу дом (no change)",
           "tts": "я вижу дом"
         },
         {
           "id": "acc-masc-animate",
           "front": "Accusative of masculine animate nouns?",
-          "back": "Takes the genitive form: Я вижу друга (друг → друга)",
+          "back": "Takes the genitive form: Я ви́жу дру́га (друг → дру́га)",
           "tts": "я вижу друга"
         },
         {
           "id": "cloze-druga",
           "front": "Я знаю ___. (друг)",
-          "back": "друга",
+          "back": "дру́га",
           "tts": "друга",
           "example": {
             "text": "Я знаю друга.",
@@ -633,7 +633,7 @@
         {
           "id": "acc-neuter",
           "front": "Accusative of neuter nouns?",
-          "back": "Same as nominative: Я вижу окно",
+          "back": "Same as nominative: Я ви́жу окно́",
           "tts": "я вижу окно"
         }
       ]
@@ -651,14 +651,14 @@
         },
         {
           "id": "moloko",
-          "front": "молоко",
+          "front": "молоко́",
           "back": "milk",
           "reverse": true,
           "tts": "молоко"
         },
         {
           "id": "chaj-kofe",
-          "front": "чай / кофе",
+          "front": "чай / ко́фе",
           "back": "tea / coffee",
           "tts": "чай, кофе",
           "hint": "кофе is masculine (exception!)"
@@ -672,14 +672,14 @@
         },
         {
           "id": "yabloko",
-          "front": "яблоко",
+          "front": "я́блоко",
           "back": "apple",
           "reverse": true,
           "tts": "яблоко"
         },
         {
           "id": "vkusnyj",
-          "front": "вкусный",
+          "front": "вку́сный",
           "back": "tasty",
           "reverse": true,
           "tts": "вкусный",
@@ -690,19 +690,19 @@
         },
         {
           "id": "bolshoj-malenkij",
-          "front": "большой / маленький",
+          "front": "большо́й / ма́ленький",
           "back": "big / small",
           "tts": "большой, маленький"
         },
         {
           "id": "khoroshij-plokhoj",
-          "front": "хороший / плохой",
+          "front": "хоро́ший / плохо́й",
           "back": "good / bad",
           "tts": "хороший, плохой"
         },
         {
           "id": "novyj-staryj",
-          "front": "новый / старый",
+          "front": "но́вый / ста́рый",
           "back": "new / old",
           "tts": "новый, старый"
         },
@@ -710,14 +710,14 @@
           "id": "adj-agreement",
           "front": "How do adjectives agree with nouns?",
           "back": {
-            "html": "Adjectives match the noun's gender:<table><tr><td>новый дом</td><td>(m)</td></tr><tr><td>новая книга</td><td>(f)</td></tr><tr><td>новое окно</td><td>(n)</td></tr></table>"
+            "html": "Adjectives match the noun's gender:<table><tr><td>но́вый дом</td><td>(m)</td></tr><tr><td>но́вая кни́га</td><td>(f)</td></tr><tr><td>но́вое окно́</td><td>(n)</td></tr></table>"
           },
           "tts": "новый дом, новая книга, новое окно"
         },
         {
           "id": "cloze-adj",
           "front": "Это ___ книга. (новый)",
-          "back": "новая",
+          "back": "но́вая",
           "tts": "новая",
           "example": {
             "text": "Это новая книга.",
@@ -726,7 +726,7 @@
         },
         {
           "id": "ya-khochu",
-          "front": "я хочу",
+          "front": "я хочу́",
           "back": "I want",
           "reverse": true,
           "tts": "я хочу",
@@ -755,14 +755,14 @@
         },
         {
           "id": "kogda",
-          "front": "когда",
+          "front": "когда́",
           "back": "when",
           "reverse": true,
           "tts": "когда"
         },
         {
           "id": "pochemu",
-          "front": "почему",
+          "front": "почему́",
           "back": "why",
           "reverse": true,
           "tts": "почему"
@@ -778,14 +778,14 @@
           "id": "past-rule",
           "front": "How is the past tense formed?",
           "back": {
-            "html": "Stem + -л + gender ending:<table><tr><td>он читал</td><td>(m)</td></tr><tr><td>она читала</td><td>(f)</td></tr><tr><td>оно читало</td><td>(n)</td></tr><tr><td>они читали</td><td>(pl)</td></tr></table>"
+            "html": "Stem + -л + gender ending:<table><tr><td>он чита́л</td><td>(m)</td></tr><tr><td>она́ чита́ла</td><td>(f)</td></tr><tr><td>оно́ чита́ло</td><td>(n)</td></tr><tr><td>они́ чита́ли</td><td>(pl)</td></tr></table>"
           },
           "tts": "читал, читала, читали"
         },
         {
           "id": "cloze-past-f",
           "front": "Она ___ книгу вчера. (читать)",
-          "back": "читала",
+          "back": "чита́ла",
           "tts": "читала",
           "example": {
             "text": "Она читала книгу вчера.",
@@ -804,7 +804,7 @@
         },
         {
           "id": "vchera-segodnya",
-          "front": "вчера / сегодня / завтра",
+          "front": "вчера́ / сего́дня / за́втра",
           "back": "yesterday / today / tomorrow",
           "reverse": true,
           "tts": "вчера, сегодня, завтра"
@@ -812,7 +812,7 @@
         {
           "id": "byl",
           "front": "Past tense of быть (to be)?",
-          "back": "был / была / было / были — the only place 'to be' shows up in everyday speech",
+          "back": "был / была́ / бы́ло / бы́ли — the only place 'to be' shows up in everyday speech",
           "tts": "был, была, было, были",
           "example": {
             "text": "Я был дома.",
