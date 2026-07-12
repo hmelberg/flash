@@ -78,7 +78,7 @@ Konflikter løses per kort: nyeste repetisjon vinner. PAT lagres kun i nettleser
 Med en Anthropic API-nøkkel (Innstillinger) får du:
 
 - **ℹ️ Mer info** — modal med kortets `info`-felt (markdown/matte) og/eller streamet KI-forklaring, med mulighet for oppfølgingsspørsmål. Forklaringer kan lagres som notat.
-- **✨ Generer kort** under «Bla» — lag N kort om et tema, forhåndsvis, lagre i valgt leksjon.
+- **✨ Generer kort** under «Bla» — beskriv hva du vil lære (antall valgfritt, standard ~100), og KI-en strukturerer kortene i leksjoner/undertema, eller fyller på en eksisterende leksjon. Forhåndsvis, stryk det du ikke vil ha, lagre — og er GitHub-synk satt opp, pushes det nye decket automatisk til repoet ditt. Instruksjonene KI-en får ligger i [`prompts/generate-deck.md`](prompts/generate-deck.md) — den kan du også lime inn i en hvilken som helst KI-chat sammen med ønsket ditt, og laste ned/inn JSON-svaret manuelt.
 - **✨ Omskriv** på leech-kort — forslag til bedre kortformuleringer.
 
 Nøkkelen lagres kun lokalt og sendes kun til Anthropic. Uten nøkkel er funksjonene skjult.
