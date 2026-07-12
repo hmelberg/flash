@@ -265,10 +265,12 @@ function findCard(deck, cardId) {
 /* ========== økt ========== */
 let session = null; // {deck, queue, idx, flipped, shownAt, failCounts, undo, stats}
 
-function startSession(deckId, includeNew) {
+function startSession(deckId, includeNew, extraNew = false) {
   const deck = store.get().decksCache[deckId];
   const { progress, settings } = store.get();
-  const built = buildSession({ deck, progress, settings, now: Date.now(), newLimitUsedToday: newUsedToday() });
+  // extraNew: brukeren ber eksplisitt om en ny runde forbi dagsgrensen
+  const built = buildSession({ deck, progress, settings, now: Date.now(),
+    newLimitUsedToday: extraNew ? 0 : newUsedToday() });
   const queue = built.due.concat(includeNew ? built.newAvail : []);
   if (!queue.length) { alert("Ingen kort å vise nå."); return; }
   session = { deck, queue, idx: 0, flipped: false, shownAt: Date.now(),
@@ -391,21 +393,32 @@ function viewHome() {
 
 function deckTile(d) {
     const c = deckCounts(d);
+    const { progress, settings } = store.get();
+    const unseen = allRefs(d).filter(r => {
+      const st = progress[progressKey(r.deckId, r.cardId, r.rev)];
+      return !st || st.due === 0;
+    }).length;
+    const quotaBlocked = c.new === 0 && unseen > 0;
     return `<div class="decktile">
       <h3>${esc(d.title)}</h3>
       <div class="pills">
         <span class="pill ${c.due ? "hot" : ""}" title="kort til repetisjon">🔁 ${c.due}</span>
-        <span class="pill" title="nye kort tilgjengelig i dag">🌱 ${c.new}</span>
+        <span class="pill" title="${quotaBlocked
+          ? `dagsgrensen på ${settings.newPerDay} nye er brukt — ${unseen} usette kort venter`
+          : "nye kort tilgjengelig i dag"}">🌱 ${c.new}</span>
       </div>
       <div class="tilebtns">
         <button class="primary" data-start="${esc(d.id)}" ${c.due + c.new ? "" : "disabled"}>▶ Start</button>
         <button class="linkish" data-startrep="${esc(d.id)}" ${c.due ? "" : "disabled"}
           title="bare kort som er til forfall">kun repetisjon</button>
+        ${quotaBlocked ? `<button class="linkish" data-morenew="${esc(d.id)}"
+          title="start en ekstra runde med nye kort forbi dagsgrensen">＋${Math.min(settings.newPerDay, unseen)} nye til</button>` : ""}
       </div></div>`;
 }
 
 function wireHome() {
   app.querySelectorAll("[data-start]").forEach(b => b.onclick = () => startSession(b.dataset.start, true));
+  app.querySelectorAll("[data-morenew]").forEach(b => b.onclick = () => startSession(b.dataset.morenew, true, true));
   app.querySelectorAll("[data-startrep]").forEach(b => b.onclick = () => startSession(b.dataset.startrep, false));
   $("#loadurl").onclick = async () => {
     try { await loadDeckFromUrl($("#deckurl").value.trim()); render(); }
