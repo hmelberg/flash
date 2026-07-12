@@ -36,6 +36,7 @@ Fleksibel flashcard-app med spaced repetition. Statisk — ingen server, ingen b
           "front": "spørsmål — tekst, $formel$ eller {\"html\": \"…\"}",
           "back": "svar — samme formater",
           "hint": "valgfritt hint (bak en knapp)",
+          "info": "valgfri utdyping i **markdown** med $matte$ — vises i «Mer info»-modalen (ℹ️)",
           "example": { "text": "setning der ordet brukes", "translation": "oversettelse" },
           "tts": "tekst som leses opp (Web Speech API, språk fra language.front)",
           "image": "valgfri bilde-URL",
@@ -52,6 +53,16 @@ Fleksibel flashcard-app med spaced repetition. Statisk — ingen server, ingen b
 - Formler: KaTeX med `$…$` / `$$…$$`. Cloze-kort skrives som `"front": "Я ___ воду (пить)"`.
 - Last tema fra fil eller URL under «Hjem», eller legg dem i `decks/` og registrer navnet i `BUILTIN`-listen i `index.html`.
 
+### Organisering av større samlinger
+
+Tre nivåer, fra fint til grovt:
+
+1. **Leksjoner** er kategoriene *i* et tema — de gir rekkefølge og kumulativ opplåsing. Vil du øve på én kategori isolert (f.eks. bare tall), bruk ▶-knappen ved leksjonen under «Bla» — øvingsmodus tar alle kortene i leksjonen, og re-planlegger bare det du feiler.
+2. **`tags`** på kortene for kategorier på tvers av leksjoner (f.eks. "verb").
+3. **Flere filer med felles `"subject"`** for store emner: `{"subject": "Russisk", "title": "Gloser", …}` og `{"subject": "Russisk", "title": "Grammatikk", …}` — hjem-siden grupperer fliser under samme overskrift. Hver fil holder sin egen fremgang og gating.
+
+Nye kort og kategorier legges til dynamisk ved å redigere JSON-filen (fremgang ligger adskilt og overlever), via KI-generering («Bla» → ✨), eller ved å laste en ny fil.
+
 ## GitHub-synk (valgfritt)
 
 Lagrer fremgang (`progress.json`) og egne/genererte decks i **ditt eget repo**.
@@ -66,7 +77,7 @@ Konflikter løses per kort: nyeste repetisjon vinner. PAT lagres kun i nettleser
 
 Med en Anthropic API-nøkkel (Innstillinger) får du:
 
-- **✨ Forklar mer** på kortets bakside — streamet forklaring, kan lagres som notat.
+- **ℹ️ Mer info** — modal med kortets `info`-felt (markdown/matte) og/eller streamet KI-forklaring, med mulighet for oppfølgingsspørsmål. Forklaringer kan lagres som notat.
 - **✨ Generer kort** under «Bla» — lag N kort om et tema, forhåndsvis, lagre i valgt leksjon.
 - **✨ Omskriv** på leech-kort — forslag til bedre kortformuleringer.
 

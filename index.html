@@ -10,6 +10,7 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
 <style>
 :root {
   --bg: #eef1f4; --fg: #1d2530; --muted: #6e7887; --card: #ffffff;
@@ -82,8 +83,21 @@ label { display: block; margin: .7rem 0 .15rem; color: var(--muted); font-size: 
 .cardwrap::after { transform: translateY(5px) scale(.978); opacity: .8; }
 .card { position: relative; z-index: 1; background: var(--card);
   border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow);
-  padding: 2.3rem 1.5rem 1.6rem; min-height: 230px; display: flex;
-  flex-direction: column; justify-content: center; text-align: center; cursor: pointer; }
+  padding: 1.1rem 1.4rem 1.9rem; height: clamp(300px, 52vh, 440px); display: flex;
+  flex-direction: column; text-align: center; cursor: pointer; }
+.qzone { flex: 0 0 42%; display: flex; flex-direction: column;
+  justify-content: center; overflow-y: auto; }
+.azone { flex: 1; overflow-y: auto; border-top: 1px solid var(--border);
+  display: flex; flex-direction: column; justify-content: flex-start; }
+.azone .answer { padding-top: 1.1rem; }
+.corner { position: absolute; right: .6rem; bottom: .45rem; display: flex;
+  gap: .1rem; opacity: .4; transition: opacity .15s; }
+.corner:hover, .corner:focus-within { opacity: 1; }
+.corner .iconbtn { font-size: .95rem; padding: .25rem .4rem; }
+.mdbox { text-align: left; font-size: .97rem; line-height: 1.55; white-space: normal; }
+.mdbox p { margin: .5rem 0; }
+.mdbox table { border-collapse: collapse; margin: .5rem 0; }
+.mdbox td, .mdbox th { border: 1px solid var(--border); padding: .2rem .5rem; }
 .card .side { font-family: var(--serif); font-size: 1.55rem; line-height: 1.35; overflow-x: auto; }
 .card .side table { margin: .5rem auto; border-collapse: collapse; font-size: 1.05rem; }
 .card .side td, .card .side th { border: 1px solid var(--border); padding: .25rem .6rem; }
@@ -92,7 +106,7 @@ label { display: block; margin: .7rem 0 .15rem; color: var(--muted); font-size: 
 .card .example { margin-top: 1rem; padding-top: .8rem; border-top: 1px dashed var(--border);
   font-family: var(--serif); font-size: 1.05rem; color: var(--muted); }
 .card .divider { border-top: 1px solid var(--border); margin: 1.1rem 0; }
-.ghost { margin: 1.4rem auto 0; border: 1px dashed var(--border); background: none;
+.ghost { margin: auto; border: 1px dashed var(--border); background: none;
   color: var(--muted); font-size: .85rem; padding: .3rem .9rem; border-radius: 99px; }
 @keyframes reveal { from { opacity: 0; transform: translateY(7px); } }
 @media (prefers-reduced-motion: reduce) {
@@ -222,6 +236,8 @@ function typeset(el) {
       delimiters: [
         { left: "$$", right: "$$", display: true },
         { left: "$", right: "$", display: false },
+        { left: "\\(", right: "\\)", display: false },
+        { left: "\\[", right: "\\]", display: true },
       ],
       throwOnError: false,
     });
@@ -261,6 +277,26 @@ function startSession(deckId, includeNew) {
   location.hash = "#session";
 }
 
+// Øvingsmodus: alle kort i én leksjon, uavhengig av forfall. Kort som ikke er
+// til forfall re-planlegges bare ved "fail" (tidlig OK gir ingen ny informasjon).
+function startPractice(deckId, lessonId) {
+  const deck = store.get().decksCache[deckId];
+  const refs = allRefs(deck).filter(r => r.lessonId === lessonId);
+  if (!refs.length) return;
+  const now = Date.now();
+  const prio = (r) => {
+    const st = store.get().progress[progressKey(r.deckId, r.cardId, r.rev)];
+    if (st && st.due > 0 && st.due <= now) return 0; // forfalt først
+    if (!st || st.due === 0) return 1;                // så nye
+    return 2;                                         // så resten
+  };
+  const queue = refs.slice().sort((a, b) => prio(a) - prio(b));
+  session = { deck, queue, idx: 0, flipped: false, shownAt: Date.now(),
+    failCounts: {}, undo: null, leechRef: null, practice: true,
+    stats: { total: 0, ok: 0, fail: 0, newLearned: 0 } };
+  location.hash = "#session";
+}
+
 function currentRef() { return session?.queue[session.idx] ?? null; }
 
 function gradeCard(grade) {
@@ -271,10 +307,12 @@ function gradeCard(grade) {
   const ms = session.shownAt2 - session.shownAt; // tid til flip
   const next = schedule(prevState, grade, ms, Date.now());
   const requeued = grade === "fail" && (session.failCounts[key] || 0) < 2;
+  // øvingsmodus: tidlig OK på et ikke-forfalt kort endrer ikke planen
+  const earlyOk = session.practice && grade === "ok" && prevState.due > Date.now();
 
   session.undo = { key, prevState: structuredClone(prevState), idx: session.idx,
     requeued, wasNew, grade };
-  store.patch(s => {
+  if (!earlyOk) store.patch(s => {
     s.progress[key] = next;
     if (wasNew) s.meta.newUsedByDay[todayKey()] = (s.meta.newUsedByDay[todayKey()] || 0) + 1;
   });
@@ -329,8 +367,29 @@ function flipCard() {
 const app = $("#app");
 
 function viewHome() {
-  const all = decks();
+  const all = decks().slice().sort((a, b) => (a.subject || "").localeCompare(b.subject || ""));
+  let lastSubject = null;
   const tiles = all.map(d => {
+    let heading = "";
+    if ((d.subject || "") !== lastSubject && all.some(x => x.subject)) {
+      lastSubject = d.subject || "";
+      heading = `</div><h2>${esc(d.subject || "Annet")}</h2><div class="deckgrid">`;
+    }
+    return heading + deckTile(d);
+  }).join("") || `<p class="muted">Ingen tema lastet ennå.</p>`;
+
+  app.innerHTML = `<h1>Dine tema</h1><div class="deckgrid">${tiles}</div>
+    <div class="addrow">
+      <input id="deckurl" placeholder="Legg til tema fra URL …" style="max-width:300px">
+      <button id="loadurl" class="iconbtn" title="Hent fra URL">🔗</button>
+      <button id="loadfile" class="iconbtn" title="Åpne JSON-fil">📄</button>
+      <input type="file" id="filepick" accept=".json" class="hidden">
+    </div>
+    <p id="loaderr" class="small" style="color:var(--danger)"></p>`;
+  wireHome();
+}
+
+function deckTile(d) {
     const c = deckCounts(d);
     return `<div class="decktile">
       <h3>${esc(d.title)}</h3>
@@ -343,17 +402,9 @@ function viewHome() {
         <button class="linkish" data-startrep="${esc(d.id)}" ${c.due ? "" : "disabled"}
           title="bare kort som er til forfall">kun repetisjon</button>
       </div></div>`;
-  }).join("") || `<p class="muted">Ingen tema lastet ennå.</p>`;
+}
 
-  app.innerHTML = `<h1>Dine tema</h1><div class="deckgrid">${tiles}</div>
-    <div class="addrow">
-      <input id="deckurl" placeholder="Legg til tema fra URL …" style="max-width:300px">
-      <button id="loadurl" class="iconbtn" title="Hent fra URL">🔗</button>
-      <button id="loadfile" class="iconbtn" title="Åpne JSON-fil">📄</button>
-      <input type="file" id="filepick" accept=".json" class="hidden">
-    </div>
-    <p id="loaderr" class="small" style="color:var(--danger)"></p>`;
-
+function wireHome() {
   app.querySelectorAll("[data-start]").forEach(b => b.onclick = () => startSession(b.dataset.start, true));
   app.querySelectorAll("[data-startrep]").forEach(b => b.onclick = () => startSession(b.dataset.startrep, false));
   $("#loadurl").onclick = async () => {
@@ -387,47 +438,42 @@ function viewSession() {
   const leech = session.leechRef;
 
   const pct = Math.round(100 * session.idx / session.queue.length);
-  const frontHtml = `<div class="side">${contentHtml(frontVal)}</div>
-    ${card.image && session.flipped ? `<img src="${esc(card.image)}" alt="">` : ""}`;
-  const backHtml = session.flipped ? `<div class="answer">
-    <div class="divider"></div>
-    <div class="side">${contentHtml(backVal)}</div>
-    ${card.example ? `<div class="example">${esc(card.example.text)}${card.example.translation ? `<br><span class="small">${esc(card.example.translation)}</span>` : ""}</div>` : ""}
-    ${noteFor(ref) ? `<div class="example">📝 ${esc(noteFor(ref))}</div>` : ""}</div>`
-    : `<button class="ghost" id="flipbtn" title="mellomrom eller →">vis svar</button>`;
+  const hasInfo = !!card.info || aiAvailable();
+  const frontHtml = `<div class="qzone">
+      <div class="side">${contentHtml(frontVal)}</div>
+      <div id="hintbox" class="progressline hidden small" style="margin-top:.4rem"></div>
+    </div>`;
+  const backHtml = `<div class="azone">${session.flipped ? `<div class="answer">
+      <div class="side">${contentHtml(backVal)}</div>
+      ${card.image ? `<img src="${esc(card.image)}" alt="">` : ""}
+      ${card.example ? `<div class="example">${esc(card.example.text)}${card.example.translation ? `<br><span class="small">${esc(card.example.translation)}</span>` : ""}</div>` : ""}
+      ${noteFor(ref) ? `<div class="example">📝 ${esc(noteFor(ref))}</div>` : ""}</div>`
+    : `<button class="ghost" id="flipbtn" title="mellomrom eller →">vis svar</button>`}</div>`;
+  const cornerHtml = `<div class="corner">
+      ${hasInfo ? `<button class="iconbtn" id="infobtn" title="Mer info">ℹ️</button>` : ""}
+      ${session.deck.settings?.tts ? `<button class="iconbtn" id="speakbtn" title="Les opp">🔊</button>` : ""}
+      ${card.hint ? `<button class="iconbtn" id="hintbtn" title="Vis hint">💡</button>` : ""}
+      ${session.flipped ? `<button class="iconbtn" data-grade="never" title="Nesten aldri gjenta (0)">💤</button>` : ""}
+    </div>`;
 
   app.innerHTML = `
     ${leech ? `<div class="banner">Dette kortet har feilet mange ganger (leech).
       <button data-leech="suspend">Suspender</button>
       <button data-leech="keep">Behold</button></div>` : ""}
     <div class="smeta">
-      <span class="deckname">${esc(session.deck.title)}</span>
+      <span class="deckname">${esc(session.deck.title)}${session.practice ? ' <span class="badge" title="øving — kort som ikke er til forfall re-planlegges bare ved feil">øving</span>' : ""}</span>
       <span class="right">${cardBadges(ref, state)}
         <span>${session.idx + 1} av ${session.queue.length}</span>
         <span class="iconbtn" style="cursor:help" title="mellomrom/→ = snu, så OK · ← eller 1 = ikke OK · 3 = OK · 0 = nesten aldri gjenta · z = angre">⌨</span>
       </span>
     </div>
     <div class="pbar"><div style="width:${pct}%"></div></div>
-    <div class="cardwrap"><div class="card" id="cardface">${frontHtml}${backHtml}</div></div>
+    <div class="cardwrap"><div class="card" id="cardface">${frontHtml}${backHtml}${cornerHtml}</div></div>
     ${session.flipped ? `
       <div class="gradebar">
         <button class="fail" data-grade="fail" title="← eller 1">✕ Ikke OK</button>
         <button class="ok" data-grade="ok" title="mellomrom, → eller 3">✓ OK</button>
-      </div>
-      <div class="toolrow">
-        <button class="iconbtn" data-grade="never" title="Nesten aldri gjenta (0)">💤</button>
-        ${session.deck.settings?.tts ? `<button class="iconbtn" id="speakbtn" title="Les opp">🔊</button>` : ""}
-        ${card.hint ? `<button class="iconbtn" id="hintbtn" title="Vis hint">💡</button>` : ""}
-        ${aiAvailable() ? `<button class="iconbtn" id="explainbtn" title="Forklar mer (KI)">✨</button>` : ""}
-        ${session.undo ? `<button class="iconbtn" id="undobtn" title="Angre siste svar (z)">↩</button>` : ""}
-      </div>
-      <div id="hintbox" class="progressline hidden" style="margin-top:.5rem"></div>
-      <div id="aibox" class="hidden"></div>` : `
-      <div class="toolrow">
-        ${card.hint ? `<button class="iconbtn" id="hintbtn" title="Vis hint">💡</button>` : ""}
-        ${session.undo ? `<button class="iconbtn" id="undobtn" title="Angre siste svar (z)">↩</button>` : ""}
-      </div>
-      <div id="hintbox" class="progressline hidden" style="margin-top:.5rem"></div>`}`;
+      </div>` : ""}`;
 
   typeset($("#cardface"));
   $("#cardface").onclick = flipCard;
@@ -436,8 +482,7 @@ function viewSession() {
   if (hintbtn) hintbtn.onclick = (e) => { e.stopPropagation();
     $("#hintbox").classList.remove("hidden"); $("#hintbox").textContent = card.hint; };
   const sp = $("#speakbtn"); if (sp) sp.onclick = (e) => { e.stopPropagation(); speak(session.deck, card); };
-  const ub = $("#undobtn"); if (ub) ub.onclick = undoLast;
-  const ex = $("#explainbtn"); if (ex) ex.onclick = () => explainCard(ref);
+  const ib = $("#infobtn"); if (ib) ib.onclick = (e) => { e.stopPropagation(); infoModal(ref); };
   app.querySelectorAll("[data-leech]").forEach(b => b.onclick = () => {
     if (b.dataset.leech === "suspend") {
       const key = progressKey(leech.deckId, leech.cardId, leech.rev);
@@ -508,6 +553,7 @@ function viewBrowse() {
     }).join("");
     return `<div class="lesson"><h3>${open.has(l.id) ? "🔓" : "🔒"} ${esc(l.title)}
         <span class="muted small">(${learned}/${refs.length} lært)</span>
+        <button class="iconbtn" data-practice="${esc(l.id)}" title="Øv på denne leksjonen nå">▶</button>
         ${!open.has(l.id) ? `<button class="small" data-unlock="${esc(l.id)}">lås opp</button>` : ""}</h3>
       ${l.note ? `<p class="muted small">${esc(l.note)}</p>` : ""}
       <table class="cardlist">${rows}</table></div>`;
@@ -518,6 +564,7 @@ function viewBrowse() {
     <button class="danger" id="rmdeck">Fjern tema fra appen</button>
     ${lessonsHtml}`;
   typeset(app);
+  app.querySelectorAll("[data-practice]").forEach(b => b.onclick = () => startPractice(deck.id, b.dataset.practice));
   app.querySelectorAll("[data-unlock]").forEach(b => b.onclick = () => {
     store.patch(s => { s.settings.unlocked.push(`${deck.id}/${b.dataset.unlock}`); }); render();
   });
@@ -794,42 +841,99 @@ function openDialog(html) {
   return dlg;
 }
 
-/* --- forklar mer --- */
-async function explainCard(ref) {
-  const box = $("#aibox");
-  if (!box) return;
-  box.classList.remove("hidden");
-  box.innerHTML = `<div class="ai-out" id="aitext"></div>
-    <div class="toolrow"><button id="aiabort">avbryt</button></div>`;
-  const out = $("#aitext");
-  const ctrl = new AbortController();
-  $("#aiabort").onclick = () => ctrl.abort();
+/* --- mer info-modal --- */
+function mdRender(el, text) {
+  el.innerHTML = window.marked ? marked.parse(text) : esc(text);
+  typeset(el);
+}
+
+function cardContext(deck, card) {
+  return `Context: ${deck.explainContext || deck.title}\n` +
+    `Card front: ${typeof card.front === "object" ? card.front.html : card.front}\n` +
+    `Card back: ${typeof card.back === "object" ? card.back.html : card.back}\n` +
+    (card.hint ? `Hint: ${card.hint}\n` : "") +
+    (card.example ? `Example: ${card.example.text} (${card.example.translation || ""})\n` : "");
+}
+
+function infoModal(ref) {
   const { card } = ref;
   const deck = session.deck;
-  const s = store.get().settings;
-  try {
-    const resp = await aiMessage({
-      model: s.model, max_tokens: 1024,
-      system: "You are a concise, excellent tutor helping with flashcard study. Explain the card below: why the answer is what it is, memory hooks, common confusions, one or two extra examples. Match the learner's level. Maximum ~250 words. Use the same language as the card's back side unless context says otherwise. You may use $...$ for math.",
-      messages: [{ role: "user", content:
-        `Context: ${deck.explainContext || deck.title}\n` +
-        `Card front: ${typeof card.front === "object" ? card.front.html : card.front}\n` +
-        `Card back: ${typeof card.back === "object" ? card.back.html : card.back}\n` +
-        (card.hint ? `Hint: ${card.hint}\n` : "") +
-        (card.example ? `Example: ${card.example.text} (${card.example.translation || ""})\n` : "") +
-        `Please explain.` }],
-    }, { onText: (t) => { out.textContent += t; }, signal: ctrl.signal });
-    typeset(out);
-    if (resp.stop_reason === "refusal") { out.textContent += "\n[Modellen avslo å svare.]"; return; }
-    box.querySelector(".toolrow").innerHTML = `<button id="ainote">lagre som notat på kortet</button>`;
-    $("#ainote").onclick = () => {
-      const key = progressKey(ref.deckId, ref.cardId, ref.rev);
-      store.patch(st => { st.meta.notes[key] = out.textContent; });
-      box.querySelector(".toolrow").innerHTML = `<span class="muted small">lagret ✓</span>`;
-    };
-  } catch (e) {
-    if (e.name !== "AbortError") out.textContent += "\n[Feil: " + aiError(e) + "]";
+  const dlg = openDialog(`<div style="padding:1.1rem 1.3rem">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem">
+      <strong>Mer info</strong>
+      <button class="iconbtn" id="mi-close" title="Lukk (Esc)">✕</button></div>
+    <div id="mi-body"></div>
+    <p id="mi-actions" style="margin:.6rem 0 0"></p>
+    ${aiAvailable() ? `<form id="mi-form" style="display:flex;gap:.5rem;margin-top:.6rem">
+      <input id="mi-q" placeholder="Still et oppfølgingsspørsmål …" autocomplete="off">
+      <button class="primary">Spør</button></form>` : ""}
+  </div>`);
+  $("#mi-close", dlg).onclick = () => dlg.close();
+  const body = $("#mi-body", dlg);
+  const actions = $("#mi-actions", dlg);
+
+  if (card.info) {
+    const d = document.createElement("div");
+    d.className = "mdbox";
+    mdRender(d, card.info);
+    body.append(d);
   }
+
+  if (!aiAvailable()) {
+    if (!card.info) body.innerHTML = `<p class="muted small">Ingen ekstra info på dette kortet.</p>`;
+    return;
+  }
+
+  const s = store.get().settings;
+  const messages = [];
+  let busy = false;
+
+  async function ask(question, { saveable = false } = {}) {
+    if (busy) return;
+    busy = true;
+    messages.push({ role: "user", content: question });
+    const out = document.createElement("div");
+    out.className = "ai-out";
+    body.append(out);
+    try {
+      const resp = await aiMessage({
+        model: s.model, max_tokens: 1500,
+        system: "You are a concise, excellent tutor helping with flashcard study. Answer in the language the user writes in (default: the language of the card's back side). Use markdown; $...$ for math. Keep answers focused.\n\nThe flashcard in question:\n" + cardContext(deck, card),
+        messages,
+      }, { onText: (t) => { out.textContent += t; } });
+      const text = resp.content.find(b => b.type === "text")?.text || out.textContent;
+      messages.push({ role: "assistant", content: text });
+      out.className = "ai-out mdbox";
+      mdRender(out, text);
+      if (resp.stop_reason === "refusal") out.append("[Modellen avslo å svare.]");
+      if (saveable) {
+        actions.innerHTML = `<button class="linkish" id="mi-note">lagre som notat på kortet</button>`;
+        $("#mi-note", dlg).onclick = () => {
+          const key = progressKey(ref.deckId, ref.cardId, ref.rev);
+          store.patch(st => { st.meta.notes[key] = text; });
+          actions.innerHTML = `<span class="muted small">lagret ✓</span>`;
+        };
+      }
+    } catch (e) {
+      if (e.name !== "AbortError") out.textContent += "\n[Feil: " + aiError(e) + "]";
+    } finally { busy = false; }
+  }
+
+  if (card.info) {
+    actions.innerHTML = `<button class="linkish" id="mi-explain">✨ be KI forklare mer</button>`;
+    $("#mi-explain", dlg).onclick = () => { actions.innerHTML = ""; ask("Explain this card: why the answer is what it is, memory hooks, common confusions, one or two extra examples. Max ~250 words.", { saveable: true }); };
+  } else {
+    ask("Explain this card: why the answer is what it is, memory hooks, common confusions, one or two extra examples. Max ~250 words.", { saveable: true });
+  }
+
+  const form = $("#mi-form", dlg);
+  if (form) form.onsubmit = (e) => {
+    e.preventDefault();
+    const q = $("#mi-q", dlg).value.trim();
+    if (!q) return;
+    $("#mi-q", dlg).value = "";
+    ask(q);
+  };
 }
 
 /* --- generer kort --- */
