@@ -1049,18 +1049,20 @@ const GEN_SCHEMA = {
   required: ["lessons"], additionalProperties: false,
 };
 
-// Systemprompten bor i repoet (prompts/generate-deck.md) — kan også brukes
-// manuelt i en hvilken som helst KI-chat. Fallback hvis fila ikke kan hentes.
-let genPromptCache = null;
-async function genSystemPrompt() {
-  if (genPromptCache) return genPromptCache;
-  try {
-    const r = await fetch("prompts/generate-deck.md", { cache: "no-cache" });
-    if (r.ok) genPromptCache = await r.text();
-  } catch { /* file:// eller offline */ }
-  genPromptCache ||= "You create high-quality flashcards as JSON {lessons:[{id,title,note,cards:[{id,front,back,hint,example,tts,reverse}]}]}. One atomic fact per card; cloze with ___ where helpful; $...$ for math; vocabulary cards get reverse=true, plain tts and a short example sentence with translation; about 100 cards in lessons of 8-14 unless told otherwise.";
-  return genPromptCache;
+// Promptene bor i repoet (prompts/*.md, på engelsk) — kan også brukes manuelt
+// i en hvilken som helst KI-chat. Fallback hvis filene ikke kan hentes.
+const promptCache = {};
+async function fetchPrompt(path, fallback) {
+  if (promptCache[path] === undefined) {
+    try {
+      const r = await fetch(path, { cache: "no-cache" });
+      promptCache[path] = r.ok ? await r.text() : "";
+    } catch { promptCache[path] = ""; /* file:// eller offline */ }
+  }
+  return promptCache[path] || fallback;
 }
+const GEN_FALLBACK = "You create high-quality flashcards as JSON {lessons:[{id,title,note,cards:[{id,front,back,hint,example,tts,reverse}]}]}. One atomic fact per card; cloze with ___ where helpful; $...$ for math; vocabulary cards get reverse=true, plain tts and a short example sentence with translation; about 100 cards in lessons of 8-14 unless told otherwise.";
+const EXTRACT_FALLBACK = "A source document is provided: extract flashcards covering its most important content, importance-first, mirroring the document's structure as lessons. Do not invent facts not in the document. Default about 1 card per 100 words.";
 
 function generateDialog(defaultDeckId) {
   const all = decks();
@@ -1068,7 +1070,12 @@ function generateDialog(defaultDeckId) {
     `<option value="${esc(d.id)}" ${d.id === defaultDeckId ? "selected" : ""}>${esc(d.title)}</option>`).join("");
   const dlg = openDialog(`<form method="dialog" style="padding:1.2rem">
     <h2 style="margin-top:0">✨ Generer kort</h2>
-    <label>Hva skal kortene handle om?</label><input id="g-topic" required placeholder="f.eks. russiske verb for bevegelse, med aspektpar">
+    <label>Hva skal kortene handle om?</label><input id="g-topic" placeholder="f.eks. russiske verb for bevegelse — eller vinkling på dokumentet under">
+    <label>Dokument (valgfritt — kortene trekkes da ut av innholdet)</label>
+    <textarea id="g-doc" rows="4" placeholder="Lim inn tekst her …"></textarea>
+    <div class="addrow"><button type="button" id="g-docfile" class="linkish">📄 hent fra fil (.txt/.md)</button>
+      <span id="g-doccount" class="muted small"></span>
+      <input type="file" id="g-docpick" accept=".txt,.md,.markdown,text/plain" class="hidden"></div>
     <label>Antall</label><input id="g-count" type="number" min="1" max="150" placeholder="ca 100" style="max-width:6.5rem">
     <label>Nivå</label><input id="g-level" placeholder="f.eks. nybegynner">
     <label>Ekstra instruks (valgfritt)</label><textarea id="g-extra" rows="2"></textarea>
@@ -1095,26 +1102,54 @@ function generateDialog(defaultDeckId) {
   fillLessons();
   $("#g-deck", dlg).onchange = fillLessons;
 
+  // dokumentfelt: fil-innlasting og forslag til antall (~1 kort per 100 ord)
+  const docWords = () => {
+    const t = $("#g-doc", dlg).value.trim();
+    return t ? t.split(/\s+/).length : 0;
+  };
+  const suggestedCount = () => Math.min(150, Math.max(5, Math.round(docWords() / 100)));
+  function updateDocInfo() {
+    const w = docWords();
+    $("#g-doccount", dlg).textContent = w ? `${w} ord → forslag ca ${suggestedCount()} kort` : "";
+    $("#g-count", dlg).placeholder = w ? `ca ${suggestedCount()}` : "ca 100";
+  }
+  $("#g-doc", dlg).oninput = updateDocInfo;
+  $("#g-docfile", dlg).onclick = () => $("#g-docpick", dlg).click();
+  $("#g-docpick", dlg).onchange = async (e) => {
+    const f = e.target.files[0];
+    if (f) { $("#g-doc", dlg).value = await f.text(); updateDocInfo(); }
+  };
+
   $("#g-run", dlg).onclick = async () => {
     const topic = $("#g-topic", dlg).value.trim();
-    if (!topic) return;
+    const doc = $("#g-doc", dlg).value.trim();
     const status = $("#g-status", dlg);
+    if (!topic && !doc) { status.textContent = "Angi tema eller lim inn et dokument."; return; }
     const s = store.get().settings;
     const targetDeck = store.get().decksCache[$("#g-deck", dlg).value];
     const toOneLesson = $("#g-lesson", dlg).value !== "__auto__";
     const count = +$("#g-count", dlg).value || 0;
     status.textContent = "Genererer …";
     try {
+      let system = await fetchPrompt("prompts/generate-deck.md", GEN_FALLBACK);
+      if (doc) system += "\n\n" + await fetchPrompt("prompts/extract-deck.md", EXTRACT_FALLBACK);
+      const countTxt = count ? String(count) : (doc ? `about ${suggestedCount()}` : "about 100");
+      const lead = doc
+        ? `Create ${countTxt} flashcards covering the most important content of the document below.\n` +
+          (topic ? `Focus/angle: ${topic}\n` : "")
+        : `Create ${countTxt} flashcards.\nTopic: ${topic}\n`;
       let received = 0;
       const resp = await aiMessage({
         model: s.model, max_tokens: 30000,
-        system: await genSystemPrompt(),
+        system,
         messages: [{ role: "user", content:
-          `Create ${count ? count : "about 100"} flashcards.\nTopic: ${topic}\nLevel: ${$("#g-level", dlg).value || "unspecified"}\n` +
+          lead +
+          `Level: ${$("#g-level", dlg).value || "unspecified"}\n` +
           (targetDeck ? `Deck context: ${targetDeck.explainContext || targetDeck.title}\n` +
             `Existing lesson titles (do not duplicate their content): ${targetDeck.lessons.map(l => l.title).join("; ")}\n` : "") +
           (toOneLesson ? "Put all cards in ONE lesson.\n" : "") +
-          ($("#g-extra", dlg).value ? `Extra instructions: ${$("#g-extra", dlg).value}\n` : "") }],
+          ($("#g-extra", dlg).value ? `Extra instructions: ${$("#g-extra", dlg).value}\n` : "") +
+          (doc ? `\nDocument:\n<<<\n${doc}\n>>>` : "") }],
         output_config: { format: { type: "json_schema", schema: GEN_SCHEMA } },
       }, { onText: (t) => { received += t.length; status.textContent = `Genererer … ${Math.round(received / 1000)} kB`; } });
       if (resp.stop_reason === "refusal") throw new Error("Modellen avslo forespørselen.");
@@ -1149,7 +1184,7 @@ function saveGenerated(genLessons, dlg, topic) {
   store.patch(s => {
     let deck;
     if (deckSel === "__new__") {
-      const title = $("#g-newtitle", dlg).value.trim() || topic;
+      const title = $("#g-newtitle", dlg).value.trim() || topic || genLessons[0].title || "Fra dokument";
       const id = "own-" + title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 30);
       deck = s.decksCache[id] || { id, title, own: true, settings: { tts: false }, lessons: [] };
       s.decksCache[id] = deck;
