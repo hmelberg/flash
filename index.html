@@ -161,7 +161,7 @@ import { buildSession, unlockedLessons, allRefs, progressKey } from "./queue.js"
 const KEY = "flash:v1";
 const DEFAULTS = {
   progress: {},
-  settings: { newPerDay: 10, autoRead: false, readExample: false, unlocked: [],
+  settings: { newPerDay: 10, autoRead: false, readQuestion: false, readExample: false, unlocked: [],
     model: "claude-opus-4-8", apiKey: "", ghRepo: "", ghPat: "", autoSync: false },
   decksCache: {},
   meta: { newUsedByDay: {}, notes: {}, lastSync: 0 },
@@ -243,17 +243,63 @@ function typeset(el) {
     });
   }
 }
-function speak(deck, card) {
+/* Tale: spørsmål og svar på hver sin side sitt språk, med to ulike stemmer.
+   Nettleseren oppgir ikke kjønn på stemmene — vi gjetter via navn på vanlige
+   systemstemmer; treffer vi ikke, velges uansett to forskjellige stemmer. */
+let voicesCache = [];
+if ("speechSynthesis" in window) {
+  const load = () => { voicesCache = speechSynthesis.getVoices(); };
+  load();
+  speechSynthesis.onvoiceschanged = load;
+}
+const VOICE_F = /female|kvinne|milena|samantha|victoria|karen|moira|tessa|alice|anna|ellen|kyoko|yuna|luciana|monica|paulina|satu|alva|nora|ida|zuzana|carmit|melina|laura|amelie|audrey|chantal|joana|kanya|lekha|mariska/i;
+const VOICE_M = /\bmale\b|\bman\b|yuri|daniel|\balex\b|fred|thomas|diego|jorge|juan|luca|magnus|henrik|oskar|xander|rishi|aaron|arthur|gordon|martin|eddy|reed|rocko/i;
+function pickVoice(lang, gender) {
+  const pfx = (lang === "no" ? "nb" : lang).toLowerCase();
+  const match = voicesCache.filter(v => v.lang.toLowerCase().startsWith(pfx) ||
+    (lang === "no" && v.lang.toLowerCase().startsWith("no")));
+  if (!match.length) return null;
+  const re = gender === "f" ? VOICE_F : VOICE_M;
+  return match.find(v => re.test(v.name)) || match[gender === "f" ? 0 : match.length - 1];
+}
+function speakText(text, lang, gender) {
+  if (!text) return;
+  const u = new SpeechSynthesisUtterance(text.replace(/́/g, "")); // fjern trykk-aksenter
+  u.lang = lang;
+  const v = pickVoice(lang, gender);
+  if (v) u.voice = v;
+  speechSynthesis.speak(u);
+}
+const plainTxt = (v) => (typeof v === "string" ? v : "");
+
+// Spørsmålet: det som vises på forsiden, i den sidens språk. Mannsstemme.
+function speakQuestion(deck, ref) {
   if (!("speechSynthesis" in window)) return;
-  const lang = deck.language?.front || "en";
-  const texts = [card.tts || (typeof card.front === "string" ? card.front : "")];
-  if (store.get().settings.readExample && card.example?.text) texts.push(card.example.text);
+  const card = ref.card;
+  const showsFront = !ref.rev;
+  const lang = showsFront ? (deck.language?.front || "en") : (deck.language?.back || "en");
+  const text = showsFront ? (card.tts || plainTxt(card.front)) : plainTxt(card.back);
   speechSynthesis.cancel();
-  for (const text of texts.filter(Boolean)) {
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = lang;
-    speechSynthesis.speak(u); // kø: svaret først, deretter ev. setningen
+  speakText(text, lang, "m");
+}
+
+// Svaret: kvinnestemme. Uten spørsmålsopplesing prioriteres målspråket (tts),
+// som før; med spørsmålsopplesing leses svarsiden på sitt eget språk.
+function speakAnswer(deck, ref) {
+  if (!("speechSynthesis" in window)) return;
+  const card = ref.card;
+  const s = store.get().settings;
+  const frontLang = deck.language?.front || "en";
+  let text, lang;
+  if (ref.rev || !s.readQuestion) {
+    text = card.tts || plainTxt(card.front); lang = frontLang;
+  } else {
+    text = plainTxt(card.back); lang = deck.language?.back || frontLang;
+    if (!text) { text = card.tts || plainTxt(card.front); lang = frontLang; }
   }
+  speechSynthesis.cancel();
+  speakText(text, lang, "f");
+  if (s.readExample && card.example?.text) speakText(card.example.text, frontLang, "f");
 }
 function deckCounts(deck) {
   const { progress, settings } = store.get();
@@ -364,7 +410,7 @@ function flipCard() {
   session.shownAt2 = Date.now();
   session.flipGuardUntil = Date.now() + 300; // hindrer at dobbelttrykk graderer ved uhell
   const ref = currentRef();
-  if (store.get().settings.autoRead && session.deck.settings?.tts) speak(session.deck, ref.card);
+  if (store.get().settings.autoRead && session.deck.settings?.tts) speakAnswer(session.deck, ref);
   render();
 }
 
@@ -497,8 +543,15 @@ function viewSession() {
   const hintbtn = $("#hintbtn");
   if (hintbtn) hintbtn.onclick = (e) => { e.stopPropagation();
     $("#hintbox").classList.remove("hidden"); $("#hintbox").textContent = card.hint; };
-  const sp = $("#speakbtn"); if (sp) sp.onclick = (e) => { e.stopPropagation(); speak(session.deck, card); };
+  const sp = $("#speakbtn"); if (sp) sp.onclick = (e) => { e.stopPropagation();
+    (session.flipped ? speakAnswer : speakQuestion)(session.deck, ref); };
   const ib = $("#infobtn"); if (ib) ib.onclick = (e) => { e.stopPropagation(); infoModal(ref); };
+  // les opp spørsmålet automatisk — én gang per kortvisning
+  if (store.get().settings.readQuestion && session.deck.settings?.tts &&
+      !session.flipped && session.qSpokenFor !== session.idx) {
+    session.qSpokenFor = session.idx;
+    speakQuestion(session.deck, ref);
+  }
   app.querySelectorAll("[data-leech]").forEach(b => b.onclick = () => {
     if (b.dataset.leech === "suspend") {
       const key = progressKey(leech.deckId, leech.cardId, leech.rev);
@@ -641,7 +694,8 @@ function viewSettings() {
   app.innerHTML = `<h1>Innstillinger</h1>
     <h2>Læring</h2>
     <label>Nye kort per dag</label><input id="s-new" type="number" min="0" max="100" value="${s.newPerDay}" style="max-width:6rem">
-    <label title="Standard er stille — 🔊-knappen på kortet leser alltid opp ved behov"><input type="checkbox" id="s-autoread" ${s.autoRead ? "checked" : ""} style="width:auto"> 🔊 Les opp automatisk når svaret vises</label>
+    <label title="Standard er stille — 🔊-knappen på kortet leser alltid opp ved behov"><input type="checkbox" id="s-autoread" ${s.autoRead ? "checked" : ""} style="width:auto"> 🔊 Les opp svaret automatisk</label>
+    <label title="Leses med egen stemme og på spørsmålssidens språk"><input type="checkbox" id="s-readquestion" ${s.readQuestion ? "checked" : ""} style="width:auto"> 🔊 Les opp spørsmålet automatisk</label>
     <label title="Gjelder både automatisk og manuell opplesing"><input type="checkbox" id="s-readexample" ${s.readExample ? "checked" : ""} style="width:auto"> Les også opp eksempelsetningen</label>
     <h2>KI (valgfritt)</h2>
     <p class="muted small">Nøkkelen lagres kun i denne nettleseren og sendes kun til Anthropic.</p>
@@ -665,6 +719,7 @@ function viewSettings() {
     store.patch(d => {
       d.settings.newPerDay = Math.max(0, +$("#s-new").value || 0);
       d.settings.autoRead = $("#s-autoread").checked;
+      d.settings.readQuestion = $("#s-readquestion").checked;
       d.settings.readExample = $("#s-readexample").checked;
       d.settings.apiKey = $("#s-key").value.trim();
       d.settings.model = $("#s-model").value.trim() || "claude-opus-4-8";
