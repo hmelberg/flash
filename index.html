@@ -161,7 +161,7 @@ import { buildSession, unlockedLessons, allRefs, progressKey } from "./queue.js"
 const KEY = "flash:v1";
 const DEFAULTS = {
   progress: {},
-  settings: { newPerDay: 10, autoRead: false, unlocked: [],
+  settings: { newPerDay: 10, autoRead: false, readExample: false, unlocked: [],
     model: "claude-opus-4-8", apiKey: "", ghRepo: "", ghPat: "", autoSync: false },
   decksCache: {},
   meta: { newUsedByDay: {}, notes: {}, lastSync: 0 },
@@ -245,12 +245,15 @@ function typeset(el) {
 }
 function speak(deck, card) {
   if (!("speechSynthesis" in window)) return;
-  const text = card.tts || (typeof card.front === "string" ? card.front : "");
-  if (!text) return;
+  const lang = deck.language?.front || "en";
+  const texts = [card.tts || (typeof card.front === "string" ? card.front : "")];
+  if (store.get().settings.readExample && card.example?.text) texts.push(card.example.text);
   speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(text);
-  u.lang = deck.language?.front || "en";
-  speechSynthesis.speak(u);
+  for (const text of texts.filter(Boolean)) {
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = lang;
+    speechSynthesis.speak(u); // kø: svaret først, deretter ev. setningen
+  }
 }
 function deckCounts(deck) {
   const { progress, settings } = store.get();
@@ -639,6 +642,7 @@ function viewSettings() {
     <h2>Læring</h2>
     <label>Nye kort per dag</label><input id="s-new" type="number" min="0" max="100" value="${s.newPerDay}" style="max-width:6rem">
     <label title="Standard er stille — 🔊-knappen på kortet leser alltid opp ved behov"><input type="checkbox" id="s-autoread" ${s.autoRead ? "checked" : ""} style="width:auto"> 🔊 Les opp automatisk når svaret vises</label>
+    <label title="Gjelder både automatisk og manuell opplesing"><input type="checkbox" id="s-readexample" ${s.readExample ? "checked" : ""} style="width:auto"> Les også opp eksempelsetningen</label>
     <h2>KI (valgfritt)</h2>
     <p class="muted small">Nøkkelen lagres kun i denne nettleseren og sendes kun til Anthropic.</p>
     <label>Anthropic API-nøkkel</label><input id="s-key" type="password" value="${esc(s.apiKey)}" placeholder="sk-ant-…">
@@ -661,6 +665,7 @@ function viewSettings() {
     store.patch(d => {
       d.settings.newPerDay = Math.max(0, +$("#s-new").value || 0);
       d.settings.autoRead = $("#s-autoread").checked;
+      d.settings.readExample = $("#s-readexample").checked;
       d.settings.apiKey = $("#s-key").value.trim();
       d.settings.model = $("#s-model").value.trim() || "claude-opus-4-8";
       d.settings.ghRepo = $("#s-repo").value.trim();
