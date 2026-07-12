@@ -147,7 +147,7 @@ import { buildSession, unlockedLessons, allRefs, progressKey } from "./queue.js"
 const KEY = "flash:v1";
 const DEFAULTS = {
   progress: {},
-  settings: { newPerDay: 10, tts: true, autoplay: true, unlocked: [],
+  settings: { newPerDay: 10, autoRead: false, unlocked: [],
     model: "claude-opus-4-8", apiKey: "", ghRepo: "", ghPat: "", autoSync: false },
   decksCache: {},
   meta: { newUsedByDay: {}, notes: {}, lastSync: 0 },
@@ -321,8 +321,7 @@ function flipCard() {
   session.shownAt2 = Date.now();
   session.flipGuardUntil = Date.now() + 300; // hindrer at dobbelttrykk graderer ved uhell
   const ref = currentRef();
-  const st = store.get().settings;
-  if (st.tts && st.autoplay && session.deck.settings?.tts && !ref.rev) speak(session.deck, ref.card);
+  if (store.get().settings.autoRead && session.deck.settings?.tts) speak(session.deck, ref.card);
   render();
 }
 
@@ -579,8 +578,7 @@ function viewSettings() {
   app.innerHTML = `<h1>Innstillinger</h1>
     <h2>Læring</h2>
     <label>Nye kort per dag</label><input id="s-new" type="number" min="0" max="100" value="${s.newPerDay}" style="max-width:6rem">
-    <label><input type="checkbox" id="s-tts" ${s.tts ? "checked" : ""} style="width:auto"> Opplesing (TTS) på</label>
-    <label><input type="checkbox" id="s-auto" ${s.autoplay ? "checked" : ""} style="width:auto"> Les opp automatisk ved snuing</label>
+    <label title="Standard er stille — 🔊-knappen på kortet leser alltid opp ved behov"><input type="checkbox" id="s-autoread" ${s.autoRead ? "checked" : ""} style="width:auto"> 🔊 Les opp automatisk når svaret vises</label>
     <h2>KI (valgfritt)</h2>
     <p class="muted small">Nøkkelen lagres kun i denne nettleseren og sendes kun til Anthropic.</p>
     <label>Anthropic API-nøkkel</label><input id="s-key" type="password" value="${esc(s.apiKey)}" placeholder="sk-ant-…">
@@ -602,8 +600,7 @@ function viewSettings() {
   $("#save").onclick = () => {
     store.patch(d => {
       d.settings.newPerDay = Math.max(0, +$("#s-new").value || 0);
-      d.settings.tts = $("#s-tts").checked;
-      d.settings.autoplay = $("#s-auto").checked;
+      d.settings.autoRead = $("#s-autoread").checked;
       d.settings.apiKey = $("#s-key").value.trim();
       d.settings.model = $("#s-model").value.trim() || "claude-opus-4-8";
       d.settings.ghRepo = $("#s-repo").value.trim();
