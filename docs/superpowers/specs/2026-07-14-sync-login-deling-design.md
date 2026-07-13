@@ -10,6 +10,14 @@ API-nøkkel, innstillinger, fremgang og egne tema — til å følge med på tver
 uten å lime inn nøkler og PAT-er på hver maskin. I tillegg skal tema kunne **deles**:
 med én person via lenke, og offentlig via en felles katalog organisert i emner.
 
+KI er **valgfritt og leverandøragnostisk**: appen er fullt brukbar uten API-nøkkel
+(lagring, synk og deling av kort er kjernen), og de som vil ha KI-funksjoner skal kunne
+bruke Anthropic **eller** en OpenAI-kompatibel tjeneste (OpenAI via OpenRouter, Gemini,
+Groq, lokal Ollama m.fl.). For brukere uten nøkkel finnes en «lag kort med KI-chat»-
+snarvei på hjemsiden: kopier en ferdig prompt (fra `prompts/generate-deck.md` pluss en
+instruks om å pakke svaret som komplett tema-JSON), lim inn i valgfri chatbot, og
+importer JSON-svaret med den eksisterende filknappen.
+
 Alt dette med **minimal egen infrastruktur**: ingen database, ingen brukerregister,
 ingen lagring av andres API-nøkler på serversiden. Brukerens data ligger i brukerens
 egen GitHub-konto eller Google Drive. Det eneste som kjører på Netlify utover statiske
@@ -19,7 +27,8 @@ ikke ligge i nettleseren).
 ## Ikke-mål
 
 - Ingen egen brukerdatabase eller e-post/passord-kontoer (ikke Netlify Identity).
-- Ingen proxying av Anthropic-kall via server — nettleseren kaller API-et direkte som i dag.
+- Ingen proxying av KI-kall via server — nettleseren kaller KI-API-ene direkte som i dag
+  (leverandører uten CORS-støtte, som api.openai.com direkte, støttes derfor ikke).
 - Ingen kryssmiks av leverandører (Google-innlogging + GitHub-lagring e.l.).
   Identitet og lagring følger hverandre: GitHub-login → GitHub-repo, Google-login → Drive.
 - Ingen sanntidssamarbeid eller felles redigering av tema.
@@ -109,6 +118,21 @@ repo `flash-data` via API-et hvis det ikke finnes; DriveStore lager mappen.
   refresh-kallet og prøver én gang til. GitHub-tokens behandles som evige; 401 → be om
   ny innlogging.
 
+### KI-motor (leverandøragnostisk)
+
+Alt KI (forklaringer, generering, leech-omskriving) går allerede gjennom ett kall,
+`aiMessage()`. Det trekkes ut i en modul `ai.js` med to stier bak samme grensesnitt
+(Anthropic-formet forespørsel inn, normalisert svar ut, streaming støttet):
+
+- **Anthropic:** dagens rå `fetch` mot `api.anthropic.com` (SDK-importen fjernes —
+  fetch-fallbacken gjør alt SDK-en brukes til).
+- **OpenAI-kompatibel:** `POST {baseUrl}/chat/completions` med SSE-streaming.
+  Innstillinger: leverandørvalg, base-URL (placeholder `https://openrouter.ai/api/v1`),
+  modell og nøkkel. Merk: `api.openai.com` sender ikke CORS-headere og kan ikke kalles
+  direkte fra nettleser — dokumenteres i UI-et; OpenRouter/Gemini/Groq/Ollama fungerer.
+
+Nye innstillinger `aiProvider` og `aiBaseUrl` synkes som resten.
+
 ### API-nøkkelen
 
 `settings.json` (inkl. `apiKey`) synkes til brukerens egen private lagring — ny enhet
@@ -169,6 +193,8 @@ OAuth-tokens synkes **aldri** — de er per enhet, i localStorage.
 2. **Google Drive:** DriveStore, refresh-håndtering, GCP-oppsett.
 3. **Deling:** `#deck=`-håndtering med forhåndsvisning, del-knapp (gist/Drive),
    «Utforsk»-katalog med emner.
-4. *(Valgfri)* passfrase-kryptering av API-nøkkelen.
+4. **KI-agnostikk + prompt-snarvei:** `ai.js` med Anthropic/OpenAI-kompatibel sti,
+   nye KI-innstillinger, «lag kort med KI-chat»-dialog med kopierbar prompt.
+5. *(Valgfri)* passfrase-kryptering av API-nøkkelen.
 
 Hver fase er selvstendig nyttig og kan slippes alene.
