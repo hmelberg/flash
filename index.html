@@ -158,6 +158,7 @@ import { newCardState, schedule, isLeech, isMature, DAY } from "./srs.js";
 import { buildSession, unlockedLessons, allRefs, progressKey } from "./queue.js";
 import { githubStore, driveStore, githubUser, ensureGithubRepo } from "./stores.js";
 import { SYNCED_SETTINGS, mergeProgress, mergeSettings, parseShareHash } from "./sync.js";
+import { aiMessage as aiCall, aiError } from "./ai.js";
 
 /* ========== lagring ========== */
 const KEY = "flash:v1";
@@ -702,8 +703,18 @@ function viewSettings() {
     <label title="Leses med egen stemme og på spørsmålssidens språk"><input type="checkbox" id="s-readquestion" ${s.readQuestion ? "checked" : ""} style="width:auto"> 🔊 Les opp spørsmålet automatisk</label>
     <label title="Gjelder både automatisk og manuell opplesing"><input type="checkbox" id="s-readexample" ${s.readExample ? "checked" : ""} style="width:auto"> Les også opp eksempelsetningen</label>
     <h2>KI (valgfritt)</h2>
-    <p class="muted small">Nøkkelen lagres kun i denne nettleseren og sendes kun til Anthropic.</p>
-    <label>Anthropic API-nøkkel</label><input id="s-key" type="password" value="${esc(s.apiKey)}" placeholder="sk-ant-…">
+    <p class="muted small">Appen virker fint uten — dette skrur på forklaringer, kortgenerering og omskriving.
+       Nøkkelen sendes kun til KI-leverandøren du velger${store.get().auth ? ", og synkes til din egen lagring" : " og lagres kun i denne nettleseren"}.</p>
+    <label>Leverandør</label>
+    <select id="s-aiprovider">
+      <option value="anthropic" ${s.aiProvider !== "openai" ? "selected" : ""}>Anthropic (Claude)</option>
+      <option value="openai" ${s.aiProvider === "openai" ? "selected" : ""}>OpenAI-kompatibel (OpenRouter, Gemini, Groq, Ollama …)</option>
+    </select>
+    <div id="s-baseurlrow" class="${s.aiProvider === "openai" ? "" : "hidden"}">
+      <label>Base-URL</label><input id="s-baseurl" value="${esc(s.aiBaseUrl)}" placeholder="https://openrouter.ai/api/v1">
+      <p class="muted small">api.openai.com kan ikke kalles direkte fra nettleser (CORS) — bruk f.eks. OpenRouter.</p>
+    </div>
+    <label>API-nøkkel</label><input id="s-key" type="password" value="${esc(s.apiKey)}" placeholder="sk-…">
     <label>Modell</label><input id="s-model" value="${esc(s.model)}">
     <h2>Konto og synk</h2>
     <div id="acct"><p class="muted small">Laster …</p></div>
@@ -724,6 +735,7 @@ function viewSettings() {
        <input type="file" id="importfile" accept=".json" class="hidden"></p>`;
 
   renderAccount($("#acct"));
+  $("#s-aiprovider").onchange = () => $("#s-baseurlrow").classList.toggle("hidden", $("#s-aiprovider").value !== "openai");
   $("#save").onclick = () => {
     store.patch(d => {
       d.settings.newPerDay = Math.max(0, +$("#s-new").value || 0);
@@ -731,7 +743,9 @@ function viewSettings() {
       d.settings.readQuestion = $("#s-readquestion").checked;
       d.settings.readExample = $("#s-readexample").checked;
       d.settings.apiKey = $("#s-key").value.trim();
-      d.settings.model = $("#s-model").value.trim() || "claude-opus-4-8";
+      d.settings.aiProvider = $("#s-aiprovider").value;
+      d.settings.aiBaseUrl = $("#s-baseurl").value.trim();
+      d.settings.model = $("#s-model").value.trim() || (d.settings.aiProvider === "openai" ? "" : "claude-opus-4-8");
       d.settings.ghRepo = $("#s-repo").value.trim();
       d.settings.ghPat = $("#s-pat").value.trim();
       d.settings.autoSync = $("#s-autosync").checked;
@@ -926,69 +940,14 @@ function maybeAutoSync() {
   if (s.autoSync && activeStore()) syncNow(null, true);
 }
 
-/* ========== Claude-integrasjon ========== */
+/* ========== KI-integrasjon (via ai.js) ========== */
 function aiAvailable() { return !!store.get().settings.apiKey; }
 
-let sdkModule; // null = import feilet, bruk rå fetch
-async function getSdk() {
-  if (sdkModule !== undefined) return sdkModule;
-  try { sdkModule = (await import("https://esm.sh/@anthropic-ai/sdk")).default; }
-  catch { sdkModule = null; }
-  return sdkModule;
-}
-
-function aiError(e) {
-  const st = e?.status ?? e?.response?.status;
-  if (st === 401) return "API-nøkkelen ble avvist — sjekk innstillinger.";
-  if (st === 429) return "For mange forespørsler — vent litt og prøv igjen.";
-  return e.message || String(e);
-}
-
-// Ett kall som virker både med SDK og rå fetch. onText => streaming.
-async function aiMessage(body, { onText, signal } = {}) {
-  const { apiKey } = store.get().settings;
-  const Sdk = await getSdk();
-  if (Sdk) {
-    const client = new Sdk({ apiKey, dangerouslyAllowBrowser: true });
-    if (onText) {
-      const stream = client.messages.stream(body, { signal });
-      stream.on("text", onText);
-      return await stream.finalMessage();
-    }
-    return await client.messages.create(body, { signal });
-  }
-  // Rå fetch-fallback
-  const headers = {
-    "content-type": "application/json",
-    "x-api-key": apiKey,
-    "anthropic-version": "2023-06-01",
-    "anthropic-dangerous-direct-browser-access": "true",
-  };
-  const r = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST", headers, signal,
-    body: JSON.stringify(onText ? { ...body, stream: true } : body),
-  });
-  if (!r.ok) { const e = new Error(`HTTP ${r.status}`); e.status = r.status; throw e; }
-  if (!onText) return await r.json();
-  const reader = r.body.getReader();
-  const dec = new TextDecoder();
-  let buf = "", finalMsg = null, text = "";
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buf += dec.decode(value, { stream: true });
-    const lines = buf.split("\n"); buf = lines.pop();
-    for (const line of lines) {
-      if (!line.startsWith("data: ")) continue;
-      let ev; try { ev = JSON.parse(line.slice(6)); } catch { continue; }
-      if (ev.type === "content_block_delta" && ev.delta?.type === "text_delta") {
-        text += ev.delta.text; onText(ev.delta.text);
-      } else if (ev.type === "message_delta") {
-        finalMsg = { stop_reason: ev.delta?.stop_reason };
-      }
-    }
-  }
-  return { ...finalMsg, content: [{ type: "text", text }] };
+// Tynn wrapper: kallstedene bruker Anthropic-formet body som før;
+// leverandørvalget bor i innstillingene.
+function aiMessage(body, opts = {}) {
+  const { aiProvider, apiKey, aiBaseUrl } = store.get().settings;
+  return aiCall({ aiProvider, apiKey, aiBaseUrl }, body, opts);
 }
 
 function openDialog(html) {
