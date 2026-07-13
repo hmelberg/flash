@@ -705,20 +705,25 @@ function viewSettings() {
     <p class="muted small">Nøkkelen lagres kun i denne nettleseren og sendes kun til Anthropic.</p>
     <label>Anthropic API-nøkkel</label><input id="s-key" type="password" value="${esc(s.apiKey)}" placeholder="sk-ant-…">
     <label>Modell</label><input id="s-model" value="${esc(s.model)}">
-    <h2>GitHub-synk (valgfritt)</h2>
-    <p class="muted small">Bruk en fine-grained PAT begrenset til ett repo (Contents: read/write). Lagres kun lokalt.</p>
-    <label>Repo (eier/navn)</label><input id="s-repo" value="${esc(s.ghRepo)}" placeholder="hansmelberg/flash-data">
-    <label>Personal Access Token</label><input id="s-pat" type="password" value="${esc(s.ghPat)}">
+    <h2>Konto og synk</h2>
+    <div id="acct"><p class="muted small">Laster …</p></div>
     <label><input type="checkbox" id="s-autosync" ${s.autoSync ? "checked" : ""} style="width:auto"> Synk automatisk etter hver økt</label>
     <p><button id="syncnow">Synk nå</button>
        <span class="muted small">${last ? "sist synket " + new Date(last).toLocaleString("no") : "aldri synket"}</span></p>
     <p id="syncstatus" class="small"></p>
+    <details style="margin:.6rem 0">
+      <summary class="muted small">Avansert: synk med egen PAT (uten innlogging)</summary>
+      <p class="muted small">Bruk en fine-grained PAT begrenset til ett repo (Contents: read/write). Lagres kun lokalt.</p>
+      <label>Repo (eier/navn)</label><input id="s-repo" value="${esc(s.ghRepo)}" placeholder="hmelberg/flash-data">
+      <label>Personal Access Token</label><input id="s-pat" type="password" value="${esc(s.ghPat)}">
+    </details>
     <p style="margin-top:1rem"><button id="save" class="primary">Lagre innstillinger</button></p>
     <h2>Backup</h2>
     <p><button id="export">Eksporter alt (JSON)</button>
        <button id="importbtn">Importer …</button>
        <input type="file" id="importfile" accept=".json" class="hidden"></p>`;
 
+  renderAccount($("#acct"));
   $("#save").onclick = () => {
     store.patch(d => {
       d.settings.newPerDay = Math.max(0, +$("#s-new").value || 0);
@@ -751,6 +756,86 @@ function viewSettings() {
       location.reload();
     } catch (err) { $("#syncstatus").textContent = "Import feilet: " + err.message; }
   };
+}
+
+async function renderAccount(el) {
+  const a = store.get().auth;
+  if (a) {
+    el.innerHTML = `<p>${a.user.avatar ? `<img src="${esc(a.user.avatar)}" alt="" style="width:24px;height:24px;border-radius:50%;vertical-align:middle"> ` : ""}
+      Logget inn som <strong>${esc(a.user.name)}</strong> (${a.provider === "github" ? "GitHub" : "Google"}) —
+      innstillinger, API-nøkkel, fremgang og egne tema synkes hit.
+      <button id="logout" class="linkish">Logg ut</button></p>`;
+    $("#logout", el).onclick = () => { store.patch(s => { s.auth = null; }); viewSettings(); };
+    return;
+  }
+  const cfg = await authConfig();
+  if (!cfg || (!cfg.github_client_id && !cfg.google_client_id)) {
+    el.innerHTML = `<p class="muted small">Innlogging er ikke satt opp på denne serveren — bruk PAT under «Avansert» hvis du vil synke.</p>`;
+    return;
+  }
+  el.innerHTML = `<p>
+      ${cfg.github_client_id ? `<button id="login-gh">Logg inn med GitHub</button>` : ""}
+      ${cfg.google_client_id ? `<button id="login-g">Logg inn med Google</button>` : ""}</p>
+    <p class="muted small">Alt lagres i din egen GitHub / Google Drive — ingen sentral database.</p>`;
+  const gh = $("#login-gh", el); if (gh) gh.onclick = () => startLogin("github");
+  const g = $("#login-g", el); if (g) g.onclick = () => startLogin("google");
+}
+
+/* ========== innlogging (OAuth via /api/auth) ========== */
+const APP_URL = () => location.origin + location.pathname;
+let authCfgCache;
+async function authConfig() {
+  if (authCfgCache !== undefined) return authCfgCache;
+  try {
+    const r = await fetch("/api/auth");
+    authCfgCache = r.ok ? await r.json() : null;
+  } catch { authCfgCache = null; } // statisk server uten funksjoner
+  return authCfgCache;
+}
+
+async function startLogin(provider) {
+  const cfg = await authConfig();
+  if (!cfg) { alert("Innlogging er ikke tilgjengelig på denne serveren."); return; }
+  const state = provider + ":" + crypto.randomUUID();
+  sessionStorage.setItem("flash:oauthstate", state);
+  const ru = encodeURIComponent(APP_URL());
+  location.href = provider === "github"
+    ? `https://github.com/login/oauth/authorize?client_id=${cfg.github_client_id}&scope=${encodeURIComponent("repo gist")}&state=${state}&redirect_uri=${ru}`
+    : `https://accounts.google.com/o/oauth2/v2/auth?client_id=${cfg.google_client_id}&response_type=code&access_type=offline&prompt=consent&scope=${encodeURIComponent("openid email profile https://www.googleapis.com/auth/drive.file")}&state=${state}&redirect_uri=${ru}`;
+}
+
+async function handleOAuthCallback() {
+  const q = new URLSearchParams(location.search);
+  const code = q.get("code"), state = q.get("state");
+  if (!code || !state) return;
+  history.replaceState(null, "", APP_URL() + location.hash); // fjern code fra URL-en
+  const expected = sessionStorage.getItem("flash:oauthstate");
+  sessionStorage.removeItem("flash:oauthstate");
+  if (state !== expected) { alert("Innlogging avbrutt: state stemmer ikke."); return; }
+  const provider = state.split(":")[0];
+  try {
+    const r = await fetch("/api/auth", {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ provider, code, redirect_uri: APP_URL() }),
+    });
+    const t = await r.json();
+    if (!r.ok) throw new Error(t.error || `HTTP ${r.status}`);
+    if (provider === "github") {
+      const u = await githubUser(t.access_token);
+      const repo = await ensureGithubRepo(t.access_token, u.login);
+      store.patch(s => { s.auth = { provider, token: t.access_token,
+        user: { name: u.name || u.login, avatar: u.avatar_url || "" }, repo }; });
+    } else {
+      const ur = await fetch("https://www.googleapis.com/oauth2/v3/userinfo",
+        { headers: { Authorization: `Bearer ${t.access_token}` } });
+      const u = ur.ok ? await ur.json() : {};
+      store.patch(s => { s.auth = { provider, token: t.access_token,
+        refreshToken: t.refresh_token || "",
+        expiresAt: Date.now() + (t.expires_in || 3600) * 1000,
+        user: { name: u.name || u.email || "Google-bruker", avatar: u.picture || "" } }; });
+    }
+    syncNow(null, true); // hent alt til den nye enheten med en gang
+  } catch (e) { alert("Innlogging feilet: " + e.message); }
 }
 
 /* ========== synk (adapterbasert) ========== */
@@ -1311,6 +1396,7 @@ document.addEventListener("keydown", (e) => {
 });
 
 /* ========== boot ========== */
+await handleOAuthCallback();
 await loadBuiltins();
 render();
 </script>
