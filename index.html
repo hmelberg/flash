@@ -512,6 +512,7 @@ function viewHome() {
       <button id="loadfile" class="iconbtn" title="Åpne JSON-fil">📄</button>
       <input type="file" id="filepick" accept=".json" class="hidden">
     </div>
+    <p class="small" style="margin-top:.6rem"><button class="linkish" id="promptbtn">📋 Lag kort med en KI-chat (uten API-nøkkel)</button></p>
     <p id="loaderr" class="small" style="color:var(--danger)"></p>`;
   wireHome();
 }
@@ -553,6 +554,50 @@ function wireHome() {
   $("#filepick").onchange = async (e) => {
     try { await loadDeckFromFile(e.target.files[0]); render(); }
     catch (err) { $("#loaderr").textContent = err.message; }
+  };
+  $("#promptbtn").onclick = () => promptDialog();
+}
+
+/* --- kopierbar prompt: lag kort i valgfri chatbot, importer JSON-svaret --- */
+const PROMPT_SUFFIX = `
+
+## Final output wrapper (important)
+
+Wrap your entire output as ONE complete deck object, ready to save as a .json file:
+
+{
+  "id": "<short-kebab-slug for the topic>",
+  "title": "<deck title in the learner's language>",
+  "language": { "front": "<ISO code>", "back": "<ISO code>" },
+  "settings": { "tts": <true if language cards, else false> },
+  "lessons": [ …as specified above… ]
+}
+
+Output ONLY the JSON (no markdown fences, no commentary).`;
+
+async function promptDialog() {
+  let base = "";
+  try {
+    const r = await fetch("prompts/generate-deck.md", { cache: "no-cache" });
+    if (r.ok) base = await r.text();
+  } catch { /* håndteres under */ }
+  if (!base) { alert("Fikk ikke hentet prompten — prøv igjen på nett."); return; }
+  const full = base + PROMPT_SUFFIX;
+  const dlg = openDialog(`<div style="padding:1.2rem;max-width:34rem">
+    <h2 style="margin-top:0">📋 Lag kort med en KI-chat</h2>
+    <p class="small">Du trenger ingen API-nøkkel: bruk ChatGPT, Claude, Gemini eller en annen chat du allerede har.</p>
+    <ol class="small">
+      <li>Kopier prompten under.</li>
+      <li>Lim den inn i chatboten sammen med temaet ditt (f.eks. «norsk–spansk reiseordforråd»)
+          eller teksten/notatene kortene skal lages fra.</li>
+      <li>Lagre svaret som en <code>.json</code>-fil og hent den inn med 📄-knappen på hjemsiden.</li>
+    </ol>
+    <div style="display:flex;gap:.6rem;justify-content:flex-end;margin-top:.8rem">
+      <button onclick="this.closest('dialog').close()">Lukk</button>
+      <button class="primary" id="copyprompt">Kopier prompt</button></div></div>`);
+  $("#copyprompt", dlg).onclick = async () => {
+    await navigator.clipboard.writeText(full);
+    $("#copyprompt", dlg).textContent = "Kopiert ✓";
   };
 }
 
