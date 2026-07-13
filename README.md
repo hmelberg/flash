@@ -1,13 +1,14 @@
 # ⚡ flash
 
-Fleksibel flashcard-app med spaced repetition. Statisk — ingen server, ingen byggetrinn. Motoren er generisk; alt innhold ligger i JSON-tema-filer i `decks/`.
+Fleksibel flashcard-app med spaced repetition. Statisk, ingen byggetrinn — eneste server-del er en valgfri, tilstandsløs Netlify-funksjon for OAuth-innlogging. Motoren er generisk; alt innhold ligger i JSON-tema-filer i `decks/`.
 
 **Innebygde tema:** Russisk for nybegynnere (94 kort) · Sannsynlighet og statistikk (80 kort).
 
 ## Kjøre
 
-- **Lokalt:** `python3 -m http.server` i denne mappen → `http://localhost:8000` (ES-moduler krever http, ikke `file://`).
-- **GitHub Pages:** push repoet, aktiver Pages (Settings → Pages → Deploy from branch → `main`, rot). Ferdig.
+- **Lokalt:** `python3 -m http.server` i denne mappen → `http://localhost:8000` (ES-moduler krever http, ikke `file://`). Innlogging krever `npx netlify dev` i stedet — se [`docs/oppsett-innlogging.md`](docs/oppsett-innlogging.md).
+- **Netlify:** koble repoet til et Netlify-site — `netlify.toml` gjør resten. Innlogging/synk krever miljøvariablene i [`docs/oppsett-innlogging.md`](docs/oppsett-innlogging.md); uten dem virker alt annet.
+- **GitHub Pages:** fungerer også (Settings → Pages → `main`, rot), men da uten innloggings-funksjonen — synk går via PAT.
 
 ## Bruk
 
@@ -63,27 +64,53 @@ Tre nivåer, fra fint til grovt:
 
 Nye kort og kategorier legges til dynamisk ved å redigere JSON-filen (fremgang ligger adskilt og overlever), via KI-generering («Bla» → ✨), eller ved å laste en ny fil.
 
-## GitHub-synk (valgfritt)
+## Innlogging og synk (valgfritt)
 
-Lagrer fremgang (`progress.json`) og egne/genererte decks i **ditt eget repo**.
+Logg inn med **GitHub eller Google** (Innstillinger) — så synkes innstillinger
+(inkl. API-nøkkel), fremgang og egne tema til **din egen** lagring: et privat
+`flash-data`-repo (GitHub) eller en `flash-data`-mappe i Drive (Google). Ny
+enhet = logg inn én gang, så er alt på plass. Ingen sentral database — det
+eneste på serversiden er en tilstandsløs OAuth-funksjon
+([oppsett](docs/oppsett-innlogging.md)).
 
-1. Lag et (privat) repo, f.eks. `flash-data`.
-2. Lag en *fine-grained* PAT begrenset til det repoet, med **Contents: Read and write**.
-3. Innstillinger → fyll inn `eier/repo` og PAT → «Synk nå».
+Konflikter løses per kort: nyeste repetisjon vinner; for innstillinger vinner
+siste lagring. OAuth-tokens forblir i nettleserens localStorage og synkes aldri.
 
-Konflikter løses per kort: nyeste repetisjon vinner. PAT lagres kun i nettleserens localStorage.
+**Alternativ uten innlogging:** «Avansert» under Innstillinger — et eget repo +
+en *fine-grained* PAT (Contents: Read and write), som før.
+
+## Deling av tema
+
+- **Lenke:** «Bla» → 🔗 **del** ved egne tema lager en delingslenke
+  (`…/#deck=<url>`) — hemmelig gist for GitHub-brukere, offentlig Drive-fil for
+  Google-brukere. Mottakeren åpner lenken, ser forhåndsvisning og legger til
+  med ett klikk — helt uten konto.
+- **Offentlig katalog:** «Utforsk»-fanen viser tema fra
+  [`flash-decks`](https://github.com/hmelberg/flash-decks)-repoet, gruppert per
+  emne. Bidra med en pull request.
 
 ## KI-funksjoner (valgfritt)
 
-Med en Anthropic API-nøkkel (Innstillinger) får du:
+Appen er fullt brukbar uten KI. Uten API-nøkkel finnes snarveien
+**«📋 Lag kort med en KI-chat»** på hjemsiden: kopier prompten, lim inn i
+ChatGPT/Claude/Gemini sammen med temaet ditt, lagre JSON-svaret og hent det inn
+med 📄-knappen.
+
+Med API-nøkkel (Innstillinger) velger du leverandør: **Anthropic (Claude)**
+eller **OpenAI-kompatibel** tjeneste via base-URL (OpenRouter, Gemini, Groq,
+lokal Ollama …; `api.openai.com` direkte støtter ikke nettleserkall/CORS —
+bruk f.eks. OpenRouter). Da får du:
 
 - **ℹ️ Mer info** — modal med kortets `info`-felt (markdown/matte) og/eller streamet KI-forklaring, med mulighet for oppfølgingsspørsmål. Forklaringer kan lagres som notat.
 - **✨ Generer kort** under «Bla» — beskriv hva du vil lære (antall valgfritt, standard ~100), og KI-en strukturerer kortene i leksjoner/undertema, eller fyller på en eksisterende leksjon. Du kan også **lime inn et dokument** (eller hente en .txt/.md/.pdf-fil) — da trekkes kortene ut av innholdet, med standard ~1 kort per 100 ord. Forhåndsvis, stryk det du ikke vil ha, lagre — og er GitHub-synk satt opp, pushes det nye decket automatisk til repoet ditt. Promptene KI-en får ligger i [`prompts/`](prompts/) (engelsk: `generate-deck.md` + `extract-deck.md`) — de kan også limes inn i en hvilken som helst KI-chat for manuell bruk.
 - **✨ Omskriv** på leech-kort — forslag til bedre kortformuleringer.
 
-Nøkkelen lagres kun lokalt og sendes kun til Anthropic. Uten nøkkel er funksjonene skjult.
+Nøkkelen sendes kun til KI-leverandøren du velger, og lagres lokalt (pluss i
+din egen private lagring hvis du er logget inn). Uten nøkkel er funksjonene skjult.
 
 ## Utvikling
 
-- `srs.js` (planlegger) og `queue.js` (øktkø) er rene moduler: `node --test test/`
-- Spec og plan: `docs/superpowers/`
+- Rene moduler med tester (`node --test`): `srs.js` (planlegger), `queue.js`
+  (øktkø), `sync.js` (merge-logikk), `stores.js` (GitHub/Drive-adaptere),
+  `ai.js` (KI-klient), `netlify/functions/auth.mjs` (OAuth-utveksling)
+- Spec og plan: `docs/superpowers/` · Deploy-oppsett: `docs/oppsett-innlogging.md`
