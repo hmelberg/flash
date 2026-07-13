@@ -75,3 +75,88 @@ export async function ensureGithubRepo(token, login, name = "flash-data") {
   if (!c.ok) throw new Error(`Klarte ikke å opprette ${full}: HTTP ${c.status}`);
   return full;
 }
+
+// Google Drive-adapter. Struktur: mappe "flash-data" i rot, undermappe "decks".
+// drive.file-scope: vi ser kun filer appen selv har laget. version = fil-id.
+export function driveStore({ getToken }) {
+  const folderIds = {};   // "" = flash-data, "decks" = undermappen
+
+  async function req(url, opts = {}) {
+    const token = await getToken();
+    const r = await fetch(url, { ...opts, headers: { Authorization: `Bearer ${token}`, ...opts.headers } });
+    if (r.status === 401) throw authError("Google");
+    return r;
+  }
+  async function query(q) {
+    const r = await req(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&fields=${encodeURIComponent("files(id,name)")}&pageSize=1000`);
+    if (!r.ok) throw new Error(`Drive-søk: HTTP ${r.status}`);
+    return (await r.json()).files || [];
+  }
+  async function folderId(sub, create) {
+    const key = sub || "";
+    if (folderIds[key]) return folderIds[key];
+    const parent = key === "" ? "root" : await folderId("", create);
+    if (parent === null) return null;
+    const name = key === "" ? "flash-data" : sub;
+    const found = await query(`name='${name}' and mimeType='application/vnd.google-apps.folder' and '${parent}' in parents and trashed=false`);
+    let id = found[0]?.id;
+    if (!id) {
+      if (!create) return null;
+      const r = await req("https://www.googleapis.com/drive/v3/files", {
+        method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ name, mimeType: "application/vnd.google-apps.folder", parents: [parent] }),
+      });
+      if (!r.ok) throw new Error(`Drive-mappe: HTTP ${r.status}`);
+      id = (await r.json()).id;
+    }
+    return (folderIds[key] = id);
+  }
+  const splitPath = (path) => {
+    const i = path.indexOf("/");
+    return i < 0 ? { sub: "", name: path } : { sub: path.slice(0, i), name: path.slice(i + 1) };
+  };
+  async function fileId(path, create) {
+    const { sub, name } = splitPath(path);
+    const parent = await folderId(sub, create);
+    if (!parent) return null;
+    const found = await query(`name='${name}' and '${parent}' in parents and trashed=false`);
+    return found[0]?.id || null;
+  }
+
+  return {
+    async load(path) {
+      const id = await fileId(path, false);
+      if (!id) return null;
+      const r = await req(`https://www.googleapis.com/drive/v3/files/${id}?alt=media`);
+      if (!r.ok) throw new Error(`Drive GET ${path}: HTTP ${r.status}`);
+      return { json: await r.json(), version: id };
+    },
+    async save(path, contentStr, version) {
+      const id = version || await fileId(path, true);
+      if (id) {
+        const r = await req(`https://www.googleapis.com/upload/drive/v3/files/${id}?uploadType=media`, {
+          method: "PATCH", headers: { "content-type": "application/json" }, body: contentStr,
+        });
+        if (!r.ok) throw new Error(`Drive PUT ${path}: HTTP ${r.status}`);
+        return;
+      }
+      const { sub, name } = splitPath(path);
+      const parent = await folderId(sub, true);
+      const boundary = "flashmp";
+      const body = `--${boundary}\r\ncontent-type: application/json; charset=UTF-8\r\n\r\n` +
+        JSON.stringify({ name, parents: [parent] }) +
+        `\r\n--${boundary}\r\ncontent-type: application/json\r\n\r\n${contentStr}\r\n--${boundary}--`;
+      const r = await req(`https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id`, {
+        method: "POST", headers: { "content-type": `multipart/related; boundary=${boundary}` }, body,
+      });
+      if (!r.ok) throw new Error(`Drive opprett ${path}: HTTP ${r.status}`);
+    },
+    async list(prefix) {
+      const sub = prefix.replace(/\/$/, "");
+      const parent = await folderId(sub, false);
+      if (!parent) return [];
+      const files = await query(`'${parent}' in parents and mimeType!='application/vnd.google-apps.folder' and trashed=false`);
+      return files.map(f => prefix + f.name);
+    },
+  };
+}
