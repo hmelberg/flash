@@ -156,15 +156,19 @@ dialog::backdrop { background: rgba(0,0,0,.45); }
 <script type="module">
 import { newCardState, schedule, isLeech, isMature, DAY } from "./srs.js";
 import { buildSession, unlockedLessons, allRefs, progressKey } from "./queue.js";
+import { githubStore, driveStore, githubUser, ensureGithubRepo } from "./stores.js";
+import { SYNCED_SETTINGS, mergeProgress, mergeSettings, parseShareHash } from "./sync.js";
 
 /* ========== lagring ========== */
 const KEY = "flash:v1";
 const DEFAULTS = {
   progress: {},
   settings: { newPerDay: 10, autoRead: false, readQuestion: false, readExample: false, unlocked: [],
-    model: "claude-opus-4-8", apiKey: "", ghRepo: "", ghPat: "", autoSync: false },
+    model: "claude-opus-4-8", apiKey: "", aiProvider: "anthropic", aiBaseUrl: "",
+    ghRepo: "", ghPat: "", autoSync: false },
+  auth: null,          // {provider, token, refreshToken?, expiresAt?, user:{name,avatar}, repo?}
   decksCache: {},
-  meta: { newUsedByDay: {}, notes: {}, lastSync: 0 },
+  meta: { newUsedByDay: {}, notes: {}, lastSync: 0, settingsUpdatedAt: 0 },
 };
 const store = (() => {
   let data;
@@ -726,6 +730,7 @@ function viewSettings() {
       d.settings.ghRepo = $("#s-repo").value.trim();
       d.settings.ghPat = $("#s-pat").value.trim();
       d.settings.autoSync = $("#s-autosync").checked;
+      d.meta.settingsUpdatedAt = Date.now();
     });
     $("#syncstatus").textContent = "Lagret.";
   };
@@ -748,87 +753,83 @@ function viewSettings() {
   };
 }
 
-/* ========== GitHub-synk ========== */
-const b64enc = (str) => {
-  const bytes = new TextEncoder().encode(str);
-  let bin = ""; for (const b of bytes) bin += String.fromCharCode(b);
-  return btoa(bin);
-};
-const b64dec = (b64) => {
-  const bin = atob(b64.replace(/\s/g, ""));
-  return new TextDecoder().decode(Uint8Array.from(bin, c => c.charCodeAt(0)));
-};
-
-function ghCfg() {
-  const { ghRepo, ghPat } = store.get().settings;
-  if (!ghRepo || !ghPat) throw new Error("Sett GitHub-repo og PAT i innstillinger først.");
-  return { ghRepo, ghPat };
-}
-async function ghFetch(path, opts = {}) {
-  const { ghRepo, ghPat } = ghCfg();
-  const r = await fetch(`https://api.github.com/repos/${ghRepo}/contents/${path}`, {
-    ...opts,
-    headers: { Authorization: `Bearer ${ghPat}`, Accept: "application/vnd.github+json", ...opts.headers },
+/* ========== synk (adapterbasert) ========== */
+// Gyldig Google-token: refresher via auth-funksjonen når det er utløpt.
+async function googleAccessToken() {
+  const a = store.get().auth;
+  if (!a || a.provider !== "google") throw new Error("Ikke logget inn med Google.");
+  if (Date.now() < (a.expiresAt || 0) - 60000) return a.token;
+  const r = await fetch("/api/auth", {
+    method: "POST", headers: { "content-type": "application/json" },
+    body: JSON.stringify({ provider: "google", refresh_token: a.refreshToken }),
   });
-  if (r.status === 401) throw new Error("GitHub avviste PAT-en (401) — lag en ny.");
-  return r;
-}
-async function ghGet(path) {
-  const r = await ghFetch(path);
-  if (r.status === 404) return null;
-  if (!r.ok) throw new Error(`GitHub GET ${path}: HTTP ${r.status}`);
-  const j = await r.json();
-  return { json: JSON.parse(b64dec(j.content)), sha: j.sha };
-}
-async function ghPut(path, contentStr, sha) {
-  const body = { message: `flash sync ${new Date().toISOString()}`, content: b64enc(contentStr) };
-  if (sha) body.sha = sha;
-  const r = await ghFetch(path, { method: "PUT", body: JSON.stringify(body) });
-  if (!r.ok) { const e = new Error(`GitHub PUT ${path}: HTTP ${r.status}`); e.status = r.status; throw e; }
+  if (!r.ok) {
+    store.patch(s => { s.auth = null; });
+    throw new Error("Google-innloggingen er utløpt — logg inn på nytt.");
+  }
+  const t = await r.json();
+  store.patch(s => { s.auth.token = t.access_token; s.auth.expiresAt = Date.now() + (t.expires_in || 3600) * 1000; });
+  return t.access_token;
 }
 
-function mergedPayload(remote) {
-  const d = store.get();
-  const progress = { ...(remote?.progress || {}) };
-  for (const [k, st] of Object.entries(d.progress)) {
-    const r = progress[k];
-    if (!r || (st.lastReview || 0) >= (r.lastReview || 0)) progress[k] = st;
-  }
-  const notes = { ...(remote?.notes || {}), ...d.meta.notes };
-  const newUsedByDay = { ...(remote?.newUsedByDay || {}) };
-  for (const [day, n] of Object.entries(d.meta.newUsedByDay))
-    newUsedByDay[day] = Math.max(newUsedByDay[day] || 0, n);
-  return { progress, notes, newUsedByDay };
+function activeStore() {
+  const { auth, settings } = store.get();
+  if (auth?.provider === "github") return githubStore({ token: auth.token, repo: auth.repo });
+  if (auth?.provider === "google") return driveStore({ getToken: googleAccessToken });
+  if (settings.ghRepo && settings.ghPat) return githubStore({ token: settings.ghPat, repo: settings.ghRepo });
+  return null;
 }
 
 async function syncNow(statusEl, silent = false) {
   const say = (m) => { if (statusEl) statusEl.textContent = m; };
+  const st = activeStore();
+  if (!st) { say("Logg inn (eller sett PAT under Avansert) for å synke."); return; }
   try {
     say("Synker …");
+    // 1) fremgang — merge, skriv, prøv én gang til ved versjonskonflikt
     let attempt = 0;
     while (true) {
-      const remote = await ghGet("progress.json");
-      const merged = mergedPayload(remote?.json);
-      try {
-        await ghPut("progress.json", JSON.stringify(merged), remote?.sha);
-      } catch (e) {
-        if ((e.status === 409 || e.status === 422) && attempt++ < 1) continue; // sha-konflikt: hent på nytt
-        throw e;
-      }
+      const remote = await st.load("progress.json");
+      const d = store.get();
+      const merged = mergeProgress(
+        { progress: d.progress, notes: d.meta.notes, newUsedByDay: d.meta.newUsedByDay },
+        remote?.json || null);
+      try { await st.save("progress.json", JSON.stringify(merged), remote?.version); }
+      catch (e) { if (e.conflict && attempt++ < 1) continue; throw e; }
       store.patch(s => {
         s.progress = merged.progress;
         s.meta.notes = merged.notes;
         s.meta.newUsedByDay = merged.newUsedByDay;
-        s.meta.lastSync = Date.now();
       });
       break;
     }
+    // 2) innstillinger — siste skriving vinner
+    const remoteS = await st.load("settings.json");
+    const d = store.get();
+    const m = mergeSettings({ values: d.settings, updatedAt: d.meta.settingsUpdatedAt }, remoteS?.json || null);
+    if (m.source === "remote") {
+      store.patch(s => { Object.assign(s.settings, m.values); s.meta.settingsUpdatedAt = m.updatedAt; });
+    } else if (!remoteS || JSON.stringify(remoteS.json.values) !== JSON.stringify(m.values)) {
+      await st.save("settings.json", JSON.stringify({ updatedAt: m.updatedAt, values: m.values }), remoteS?.version);
+    }
+    // 3) egne tema: dytt lokale …
     for (const deck of decks()) {
       if (!deck.own) continue;
       const path = `decks/${deck.id}.json`;
-      const remote = await ghGet(path);
-      await ghPut(path, JSON.stringify(deck, null, 1), remote?.sha);
+      const remote = await st.load(path);
+      await st.save(path, JSON.stringify(deck, null, 1), remote?.version);
     }
+    // … og hent tema som bare finnes eksternt (ny enhet)
+    for (const path of await st.list("decks/")) {
+      const id = path.slice("decks/".length).replace(/\.json$/, "");
+      if (store.get().decksCache[id]) continue;
+      const remote = await st.load(path);
+      if (remote) {
+        try { const deck = validateDeck(remote.json); deck.own = true; cacheDeck(deck); }
+        catch { /* ugyldig fil eksternt — hopp over */ }
+      }
+    }
+    store.patch(s => { s.meta.lastSync = Date.now(); });
     say("Synket ✓");
   } catch (e) {
     say("Synk feilet: " + e.message);
@@ -837,7 +838,7 @@ async function syncNow(statusEl, silent = false) {
 }
 function maybeAutoSync() {
   const s = store.get().settings;
-  if (s.autoSync && s.ghRepo && s.ghPat) syncNow(null, true);
+  if (s.autoSync && activeStore()) syncNow(null, true);
 }
 
 /* ========== Claude-integrasjon ========== */
@@ -1252,8 +1253,7 @@ function saveGenerated(genLessons, dlg, topic) {
   dlg.close();
   render();
   // lagre eksternt med en gang hvis GitHub-synk er satt opp
-  const st = store.get().settings;
-  if (st.ghRepo && st.ghPat) syncNow(null, true);
+  if (activeStore()) syncNow(null, true);
 }
 
 /* --- omskriv leech --- */
