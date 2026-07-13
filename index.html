@@ -250,6 +250,53 @@ async function handleShareHash() {
   $("#share-add", dlg).onclick = () => { cacheDeck(deck); dlg.close(); render(); };
 }
 
+// Del et eget tema: hemmelig gist (GitHub) eller offentlig Drive-fil (Google).
+async function shareDeck(id) {
+  const deck = store.get().decksCache[id];
+  const a = store.get().auth;
+  if (!deck) return;
+  if (!a) { alert("Logg inn med GitHub eller Google (Innstillinger) for å dele."); return; }
+  try {
+    let rawUrl;
+    const content = JSON.stringify(deck, null, 1);
+    if (a.provider === "github") {
+      const r = await fetch("https://api.github.com/gists", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${a.token}`, Accept: "application/vnd.github+json" },
+        body: JSON.stringify({ public: false, description: `flash-tema: ${deck.title}`,
+          files: { [`${deck.id}.json`]: { content } } }),
+      });
+      if (!r.ok) throw new Error(`GitHub gist: HTTP ${r.status}`);
+      rawUrl = (await r.json()).files[`${deck.id}.json`].raw_url;
+    } else {
+      const token = await googleAccessToken();
+      const boundary = "flashshare";
+      const body = `--${boundary}\r\ncontent-type: application/json; charset=UTF-8\r\n\r\n` +
+        JSON.stringify({ name: `flash-delt-${deck.id}.json` }) +
+        `\r\n--${boundary}\r\ncontent-type: application/json\r\n\r\n${content}\r\n--${boundary}--`;
+      const cr = await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "content-type": `multipart/related; boundary=${boundary}` },
+        body,
+      });
+      if (!cr.ok) throw new Error(`Drive: HTTP ${cr.status}`);
+      const fid = (await cr.json()).id;
+      const pr = await fetch(`https://www.googleapis.com/drive/v3/files/${fid}/permissions`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "content-type": "application/json" },
+        body: JSON.stringify({ role: "reader", type: "anyone" }),
+      });
+      if (!pr.ok) throw new Error(`Drive-deling: HTTP ${pr.status}`);
+      const cfg = await authConfig();
+      if (!cfg?.google_api_key) throw new Error("Serveren mangler GOOGLE_API_KEY — kan ikke lage offentlig lenke.");
+      rawUrl = `https://www.googleapis.com/drive/v3/files/${fid}?alt=media&key=${cfg.google_api_key}`;
+    }
+    const link = `${APP_URL()}#deck=${encodeURIComponent(rawUrl)}`;
+    await navigator.clipboard.writeText(link);
+    alert("Delingslenke kopiert til utklippstavlen:\n\n" + link);
+  } catch (e) { alert("Deling feilet: " + e.message); }
+}
+
 /* ========== hjelpere ========== */
 const $ = (sel, el = document) => el.querySelector(sel);
 const esc = (s) => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -625,10 +672,11 @@ function viewBrowse() {
     const rows = decks().map(d =>
       `<div class="deckrow"><a href="#browse/${encodeURIComponent(d.id)}"><strong>${esc(d.title)}</strong></a>
        <span class="counts">${d.lessons.reduce((n, l) => n + l.cards.length, 0)} kort · ${d.lessons.length} leksjoner
-       ${d.own ? '· <span class="badge">eget</span>' : ""}</span></div>`).join("");
+       ${d.own ? `· <span class="badge">eget</span> <button class="small" data-share="${esc(d.id)}">🔗 del</button>` : ""}</span></div>`).join("");
     app.innerHTML = `<h1>Bla i tema</h1>${rows || '<p class="muted">Ingen tema.</p>'}
       ${aiAvailable() ? `<button id="genbtn" class="primary" style="margin-top:1rem">✨ Generer kort med KI</button>` : ""}`;
     const g = $("#genbtn"); if (g) g.onclick = () => generateDialog();
+    app.querySelectorAll("[data-share]").forEach(b => b.onclick = () => shareDeck(b.dataset.share));
     return;
   }
 
