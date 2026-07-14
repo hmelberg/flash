@@ -3,3 +3,16 @@
 
 [functions]
   directory = "netlify/functions"
+
+# Gamle domener videresendes til det primære (hash-delen av URL-er overlever redirect)
+[[redirects]]
+  from = "https://flash.melberg.app/*"
+  to = "https://memorice.app/:splat"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "https://flashhans.netlify.app/*"
+  to = "https://memorice.app/:splat"
+  status = 301
+  force = true
