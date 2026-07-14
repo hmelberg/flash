@@ -8,8 +8,8 @@
 
 export function aiError(e) {
   const st = e?.status ?? e?.response?.status;
-  if (st === 401) return "API-nøkkelen ble avvist — sjekk innstillinger.";
-  if (st === 429) return "For mange forespørsler — vent litt og prøv igjen.";
+  if (st === 401) return "The API key was rejected — check your settings.";
+  if (st === 429) return "Too many requests — wait a moment and try again.";
   return e.message || String(e);
 }
 
@@ -61,7 +61,7 @@ async function anthropicMessage({ apiKey }, body, { onText, signal } = {}) {
 }
 
 async function openaiMessage({ apiKey, aiBaseUrl }, body, { onText, signal } = {}) {
-  if (!aiBaseUrl) throw new Error("Sett base-URL for OpenAI-kompatibel tjeneste i innstillinger (f.eks. https://openrouter.ai/api/v1).");
+  if (!aiBaseUrl) throw new Error("Set the base URL for the OpenAI-compatible service in settings (e.g. https://openrouter.ai/api/v1).");
   const url = aiBaseUrl.replace(/\/$/, "") + "/chat/completions";
   const oaBody = {
     model: body.model, max_tokens: body.max_tokens,

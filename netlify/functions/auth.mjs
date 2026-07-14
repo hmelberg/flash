@@ -14,10 +14,10 @@ export default async (req) => {
   }
   if (req.method !== "POST") return json({ error: "method not allowed" }, 405);
   let body;
-  try { body = await req.json(); } catch { return json({ error: "ugyldig JSON" }, 400); }
+  try { body = await req.json(); } catch { return json({ error: "invalid JSON" }, 400); }
 
   if (body.provider === "github") {
-    if (!body.code) return json({ error: "mangler code" }, 400);
+    if (!body.code) return json({ error: "missing code" }, 400);
     const r = await fetch("https://github.com/login/oauth/access_token", {
       method: "POST",
       headers: { "content-type": "application/json", accept: "application/json" },
@@ -28,12 +28,12 @@ export default async (req) => {
       }),
     });
     const t = await r.json();
-    if (!t.access_token) return json({ error: t.error_description || "GitHub avviste koden" }, 400);
+    if (!t.access_token) return json({ error: t.error_description || "GitHub rejected the code" }, 400);
     return json({ access_token: t.access_token });
   }
 
   if (body.provider === "google") {
-    if (!body.code && !body.refresh_token) return json({ error: "mangler code/refresh_token" }, 400);
+    if (!body.code && !body.refresh_token) return json({ error: "missing code/refresh_token" }, 400);
     const grant = body.refresh_token
       ? { grant_type: "refresh_token", refresh_token: body.refresh_token }
       : { grant_type: "authorization_code", code: body.code, redirect_uri: body.redirect_uri || "" };
@@ -47,11 +47,11 @@ export default async (req) => {
       }).toString(),
     });
     const t = await r.json();
-    if (!t.access_token) return json({ error: t.error_description || t.error || "Google avviste forespørselen" }, 400);
+    if (!t.access_token) return json({ error: t.error_description || t.error || "Google rejected the request" }, 400);
     return json({ access_token: t.access_token, refresh_token: t.refresh_token, expires_in: t.expires_in });
   }
 
-  return json({ error: "ukjent provider" }, 400);
+  return json({ error: "unknown provider" }, 400);
 };
 
 export const config = { path: "/api/auth" };

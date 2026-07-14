@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="no">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -146,11 +146,11 @@ dialog::backdrop { background: rgba(0,0,0,.45); }
 <body>
 <header>
   <span class="logo">⚡ flash</span>
-  <a href="#home" data-nav="home">Hjem</a>
-  <a href="#browse" data-nav="browse">Bla</a>
-  <a href="#explore" data-nav="explore">Utforsk</a>
-  <a href="#stats" data-nav="stats">Statistikk</a>
-  <a href="#settings" data-nav="settings">Innstillinger</a>
+  <a href="#home" data-nav="home">Home</a>
+  <a href="#browse" data-nav="browse">Browse</a>
+  <a href="#explore" data-nav="explore">Explore</a>
+  <a href="#stats" data-nav="stats">Stats</a>
+  <a href="#settings" data-nav="settings">Settings</a>
 </header>
 <main id="app"></main>
 
@@ -188,20 +188,20 @@ const newUsedToday = () => store.get().meta.newUsedByDay[todayKey()] || 0;
 const BUILTIN = ["russian", "probability"];
 
 function validateDeck(d) {
-  const fail = (msg) => { throw new Error(`Ugyldig deck: ${msg}`); };
-  if (!d || typeof d !== "object") fail("ikke et JSON-objekt");
-  if (!d.id) fail("mangler 'id'");
-  if (!d.title) fail("mangler 'title'");
-  if (!Array.isArray(d.lessons) || !d.lessons.length) fail("mangler 'lessons'");
+  const fail = (msg) => { throw new Error(`Invalid deck: ${msg}`); };
+  if (!d || typeof d !== "object") fail("not a JSON object");
+  if (!d.id) fail("missing 'id'");
+  if (!d.title) fail("missing 'title'");
+  if (!Array.isArray(d.lessons) || !d.lessons.length) fail("missing 'lessons'");
   const seen = new Set();
   d.lessons.forEach((l, li) => {
-    if (!l.id) fail(`leksjon ${li + 1} mangler 'id'`);
-    if (!Array.isArray(l.cards)) fail(`leksjon '${l.id}' mangler 'cards'`);
+    if (!l.id) fail(`lesson ${li + 1} is missing 'id'`);
+    if (!Array.isArray(l.cards)) fail(`lesson '${l.id}' is missing 'cards'`);
     l.cards.forEach((c, ci) => {
-      if (!c.id) fail(`leksjon '${l.id}', kort ${ci + 1}: mangler 'id'`);
-      if (seen.has(c.id)) fail(`duplikat kort-id '${c.id}'`);
+      if (!c.id) fail(`lesson '${l.id}', card ${ci + 1}: missing 'id'`);
+      if (seen.has(c.id)) fail(`duplicate card id '${c.id}'`);
       seen.add(c.id);
-      if (c.front == null || c.back == null) fail(`kort '${c.id}': mangler front/back`);
+      if (c.front == null || c.back == null) fail(`card '${c.id}': missing front/back`);
     });
   });
   return d;
@@ -238,16 +238,16 @@ async function handleShareHash() {
     const r = await fetch(url);
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     deck = validateDeck(await r.json());
-  } catch (e) { alert("Klarte ikke å hente det delte temaet: " + e.message); return; }
+  } catch (e) { alert("Could not fetch the shared deck: " + e.message); return; }
   const nCards = deck.lessons.reduce((n, l) => n + l.cards.length, 0);
   const finnes = !!store.get().decksCache[deck.id];
   const dlg = openDialog(`<div style="padding:1.2rem">
-    <h2 style="margin-top:0">📬 Delt tema</h2>
-    <p><strong>${esc(deck.title)}</strong> — ${deck.lessons.length} leksjoner, ${nCards} kort.</p>
-    ${finnes ? `<p class="small" style="color:var(--danger)">Du har allerede et tema med id «${esc(deck.id)}» — det blir erstattet (fremgangen beholdes).</p>` : ""}
+    <h2 style="margin-top:0">📬 Shared deck</h2>
+    <p><strong>${esc(deck.title)}</strong> — ${deck.lessons.length} lessons, ${nCards} cards.</p>
+    ${finnes ? `<p class="small" style="color:var(--danger)">You already have a deck with id "${esc(deck.id)}" — it will be replaced (your progress is kept).</p>` : ""}
     <div style="display:flex;gap:.6rem;justify-content:flex-end;margin-top:.8rem">
-      <button onclick="this.closest('dialog').close()">Avbryt</button>
-      <button class="primary" id="share-add">Legg til</button></div></div>`);
+      <button onclick="this.closest('dialog').close()">Cancel</button>
+      <button class="primary" id="share-add">Add deck</button></div></div>`);
   $("#share-add", dlg).onclick = () => { cacheDeck(deck); dlg.close(); render(); };
 }
 
@@ -256,7 +256,7 @@ async function shareDeck(id) {
   const deck = store.get().decksCache[id];
   const a = store.get().auth;
   if (!deck) return;
-  if (!a) { alert("Logg inn med GitHub eller Google (Innstillinger) for å dele."); return; }
+  if (!a) { alert("Sign in with GitHub or Google (Settings) to share."); return; }
   try {
     let rawUrl;
     const content = JSON.stringify(deck, null, 1);
@@ -273,7 +273,7 @@ async function shareDeck(id) {
       const token = await googleAccessToken();
       const boundary = "flashshare";
       const body = `--${boundary}\r\ncontent-type: application/json; charset=UTF-8\r\n\r\n` +
-        JSON.stringify({ name: `flash-delt-${deck.id}.json` }) +
+        JSON.stringify({ name: `flash-shared-${deck.id}.json` }) +
         `\r\n--${boundary}\r\ncontent-type: application/json\r\n\r\n${content}\r\n--${boundary}--`;
       const cr = await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id", {
         method: "POST",
@@ -287,15 +287,15 @@ async function shareDeck(id) {
         headers: { Authorization: `Bearer ${token}`, "content-type": "application/json" },
         body: JSON.stringify({ role: "reader", type: "anyone" }),
       });
-      if (!pr.ok) throw new Error(`Drive-deling: HTTP ${pr.status}`);
+      if (!pr.ok) throw new Error(`Drive sharing: HTTP ${pr.status}`);
       const cfg = await authConfig();
-      if (!cfg?.google_api_key) throw new Error("Serveren mangler GOOGLE_API_KEY — kan ikke lage offentlig lenke.");
+      if (!cfg?.google_api_key) throw new Error("The server is missing GOOGLE_API_KEY — cannot create a public link.");
       rawUrl = `https://www.googleapis.com/drive/v3/files/${fid}?alt=media&key=${cfg.google_api_key}`;
     }
     const link = `${APP_URL()}#deck=${encodeURIComponent(rawUrl)}`;
     await navigator.clipboard.writeText(link);
-    alert("Delingslenke kopiert til utklippstavlen:\n\n" + link);
-  } catch (e) { alert("Deling feilet: " + e.message); }
+    alert("Share link copied to the clipboard:\n\n" + link);
+  } catch (e) { alert("Sharing failed: " + e.message); }
 }
 
 /* ========== hjelpere ========== */
@@ -397,7 +397,7 @@ function startSession(deckId, includeNew, extraNew = false) {
   const built = buildSession({ deck, progress, settings, now: Date.now(),
     newLimitUsedToday: extraNew ? 0 : newUsedToday() });
   const queue = built.due.concat(includeNew ? built.newAvail : []);
-  if (!queue.length) { alert("Ingen kort å vise nå."); return; }
+  if (!queue.length) { alert("No cards to show right now."); return; }
   session = { deck, queue, idx: 0, flipped: false, shownAt: Date.now(),
     failCounts: {}, undo: null, leechRef: null,
     stats: { total: 0, ok: 0, fail: 0, newLearned: 0 } };
@@ -500,19 +500,19 @@ function viewHome() {
     let heading = "";
     if ((d.subject || "") !== lastSubject && all.some(x => x.subject)) {
       lastSubject = d.subject || "";
-      heading = `</div><h2>${esc(d.subject || "Annet")}</h2><div class="deckgrid">`;
+      heading = `</div><h2>${esc(d.subject || "Other")}</h2><div class="deckgrid">`;
     }
     return heading + deckTile(d);
-  }).join("") || `<p class="muted">Ingen tema lastet ennå.</p>`;
+  }).join("") || `<p class="muted">No decks loaded yet.</p>`;
 
-  app.innerHTML = `<h1>Dine tema</h1><div class="deckgrid">${tiles}</div>
+  app.innerHTML = `<h1>Your decks</h1><div class="deckgrid">${tiles}</div>
     <div class="addrow">
-      <input id="deckurl" placeholder="Legg til tema fra URL …" style="max-width:300px">
-      <button id="loadurl" class="iconbtn" title="Hent fra URL">🔗</button>
-      <button id="loadfile" class="iconbtn" title="Åpne JSON-fil">📄</button>
+      <input id="deckurl" placeholder="Add deck from URL …" style="max-width:300px">
+      <button id="loadurl" class="iconbtn" title="Fetch from URL">🔗</button>
+      <button id="loadfile" class="iconbtn" title="Open JSON file">📄</button>
       <input type="file" id="filepick" accept=".json" class="hidden">
     </div>
-    <p class="small" style="margin-top:.6rem"><button class="linkish" id="promptbtn">📋 Lag kort med en KI-chat (uten API-nøkkel)</button></p>
+    <p class="small" style="margin-top:.6rem"><button class="linkish" id="promptbtn">📋 Create cards with an AI chat (no API key needed)</button></p>
     <p id="loaderr" class="small" style="color:var(--danger)"></p>`;
   wireHome();
 }
@@ -528,17 +528,17 @@ function deckTile(d) {
     return `<div class="decktile">
       <h3>${esc(d.title)}</h3>
       <div class="pills">
-        <span class="pill ${c.due ? "hot" : ""}" title="kort til repetisjon">🔁 ${c.due}</span>
+        <span class="pill ${c.due ? "hot" : ""}" title="cards due for review">🔁 ${c.due}</span>
         <span class="pill" title="${quotaBlocked
-          ? `dagsgrensen på ${settings.newPerDay} nye er brukt — ${unseen} usette kort venter`
-          : "nye kort tilgjengelig i dag"}">🌱 ${c.new}</span>
+          ? `daily limit of ${settings.newPerDay} new cards reached — ${unseen} unseen cards waiting`
+          : "new cards available today"}">🌱 ${c.new}</span>
       </div>
       <div class="tilebtns">
         <button class="primary" data-start="${esc(d.id)}" ${c.due + c.new ? "" : "disabled"}>▶ Start</button>
         <button class="linkish" data-startrep="${esc(d.id)}" ${c.due ? "" : "disabled"}
-          title="bare kort som er til forfall">kun repetisjon</button>
+          title="only cards that are due">review only</button>
         ${quotaBlocked ? `<button class="linkish" data-morenew="${esc(d.id)}"
-          title="start en ekstra runde med nye kort forbi dagsgrensen">＋${Math.min(settings.newPerDay, unseen)} nye til</button>` : ""}
+          title="start an extra round of new cards beyond the daily limit">＋${Math.min(settings.newPerDay, unseen)} more new</button>` : ""}
       </div></div>`;
 }
 
@@ -581,31 +581,31 @@ async function promptDialog() {
     const r = await fetch("prompts/generate-deck.md", { cache: "no-cache" });
     if (r.ok) base = await r.text();
   } catch { /* håndteres under */ }
-  if (!base) { alert("Fikk ikke hentet prompten — prøv igjen på nett."); return; }
+  if (!base) { alert("Could not fetch the prompt — try again while online."); return; }
   const full = base + PROMPT_SUFFIX;
   const dlg = openDialog(`<div style="padding:1.2rem;max-width:34rem">
-    <h2 style="margin-top:0">📋 Lag kort med en KI-chat</h2>
-    <p class="small">Du trenger ingen API-nøkkel: bruk ChatGPT, Claude, Gemini eller en annen chat du allerede har.</p>
+    <h2 style="margin-top:0">📋 Create cards with an AI chat</h2>
+    <p class="small">No API key needed: use ChatGPT, Claude, Gemini or any other chat you already have.</p>
     <ol class="small">
-      <li>Kopier prompten under.</li>
-      <li>Lim den inn i chatboten sammen med temaet ditt (f.eks. «norsk–spansk reiseordforråd»)
-          eller teksten/notatene kortene skal lages fra.</li>
-      <li>Lagre svaret som en <code>.json</code>-fil og hent den inn med 📄-knappen på hjemsiden.</li>
+      <li>Copy the prompt below.</li>
+      <li>Paste it into the chatbot together with your topic (e.g. "Spanish travel vocabulary")
+          or the text/notes the cards should be made from.</li>
+      <li>Save the reply as a <code>.json</code> file and load it with the 📄 button on the home page.</li>
     </ol>
     <div style="display:flex;gap:.6rem;justify-content:flex-end;margin-top:.8rem">
-      <button onclick="this.closest('dialog').close()">Lukk</button>
-      <button class="primary" id="copyprompt">Kopier prompt</button></div></div>`);
+      <button onclick="this.closest('dialog').close()">Close</button>
+      <button class="primary" id="copyprompt">Copy prompt</button></div></div>`);
   $("#copyprompt", dlg).onclick = async () => {
     await navigator.clipboard.writeText(full);
-    $("#copyprompt", dlg).textContent = "Kopiert ✓";
+    $("#copyprompt", dlg).textContent = "Copied ✓";
   };
 }
 
 function cardBadges(ref, state) {
   const b = [];
-  if (!state || state.due === 0) b.push(`<span class="badge new" title="nytt kort">ny</span>`);
-  if (ref.rev) b.push(`<span class="badge" title="speilkort: svar → spørsmål">⇄</span>`);
-  if (state && isLeech(state)) b.push(`<span class="badge leech" title="feiler ofte — vurder å omskrive">leech</span>`);
+  if (!state || state.due === 0) b.push(`<span class="badge new" title="new card">new</span>`);
+  if (ref.rev) b.push(`<span class="badge" title="reversed card: answer → question">⇄</span>`);
+  if (state && isLeech(state)) b.push(`<span class="badge leech" title="fails often — consider rewriting it">leech</span>`);
   return b.join(" ");
 }
 
@@ -631,31 +631,31 @@ function viewSession() {
       ${card.image ? `<img src="${esc(card.image)}" alt="">` : ""}
       ${card.example ? `<div class="example">${esc(card.example.text)}${card.example.translation ? `<br><span class="small">${esc(card.example.translation)}</span>` : ""}</div>` : ""}
       ${noteFor(ref) ? `<div class="example">📝 ${esc(noteFor(ref))}</div>` : ""}</div>`
-    : `<button class="ghost" id="flipbtn" title="mellomrom eller →">vis svar</button>`}</div>`;
+    : `<button class="ghost" id="flipbtn" title="space or →">show answer</button>`}</div>`;
   const cornerHtml = `<div class="corner">
-      ${hasInfo ? `<button class="iconbtn" id="infobtn" title="Mer info">ℹ️</button>` : ""}
-      ${session.deck.settings?.tts ? `<button class="iconbtn" id="speakbtn" title="Les opp">🔊</button>` : ""}
-      ${card.hint ? `<button class="iconbtn" id="hintbtn" title="Vis hint">💡</button>` : ""}
-      ${session.flipped ? `<button class="iconbtn" data-grade="never" title="Nesten aldri gjenta (0)">💤</button>` : ""}
+      ${hasInfo ? `<button class="iconbtn" id="infobtn" title="More info">ℹ️</button>` : ""}
+      ${session.deck.settings?.tts ? `<button class="iconbtn" id="speakbtn" title="Read aloud">🔊</button>` : ""}
+      ${card.hint ? `<button class="iconbtn" id="hintbtn" title="Show hint">💡</button>` : ""}
+      ${session.flipped ? `<button class="iconbtn" data-grade="never" title="Almost never repeat (0)">💤</button>` : ""}
     </div>`;
 
   app.innerHTML = `
-    ${leech ? `<div class="banner">Dette kortet har feilet mange ganger (leech).
-      <button data-leech="suspend">Suspender</button>
-      <button data-leech="keep">Behold</button></div>` : ""}
+    ${leech ? `<div class="banner">This card has failed many times (leech).
+      <button data-leech="suspend">Suspend</button>
+      <button data-leech="keep">Keep</button></div>` : ""}
     <div class="smeta">
-      <span class="deckname">${esc(session.deck.title)}${session.practice ? ' <span class="badge" title="øving — kort som ikke er til forfall re-planlegges bare ved feil">øving</span>' : ""}</span>
+      <span class="deckname">${esc(session.deck.title)}${session.practice ? ' <span class="badge" title="practice — cards that are not due are only rescheduled on fail">practice</span>' : ""}</span>
       <span class="right">${cardBadges(ref, state)}
-        <span>${session.idx + 1} av ${session.queue.length}</span>
-        <span class="iconbtn" style="cursor:help" title="mellomrom/→ = snu, så OK · ← eller 1 = ikke OK · 3 = OK · 0 = nesten aldri gjenta · z = angre">⌨</span>
+        <span>${session.idx + 1} of ${session.queue.length}</span>
+        <span class="iconbtn" style="cursor:help" title="space/→ = flip, then OK · ← or 1 = not OK · 3 = OK · 0 = almost never repeat · z = undo">⌨</span>
       </span>
     </div>
     <div class="pbar"><div style="width:${pct}%"></div></div>
     <div class="cardwrap"><div class="card" id="cardface">${frontHtml}${backHtml}${cornerHtml}</div></div>
     ${session.flipped ? `
       <div class="gradebar">
-        <button class="fail" data-grade="fail" title="← eller 1">✕ Ikke OK</button>
-        <button class="ok" data-grade="ok" title="mellomrom, → eller 3">✓ OK</button>
+        <button class="fail" data-grade="fail" title="← or 1">✕ Not OK</button>
+        <button class="ok" data-grade="ok" title="space, → or 3">✓ OK</button>
       </div>` : ""}`;
 
   typeset($("#cardface"));
@@ -689,12 +689,12 @@ function viewSummary() {
     <div class="cardwrap" style="margin-top:1.4rem"><div class="card" style="cursor:default">
       <div class="side">🎉</div>
       <div class="pills" style="justify-content:center;margin-top:1rem">
-        <span class="pill" title="kort besvart">📇 ${s.total}</span>
-        <span class="pill" title="andel riktig">✓ ${pct} %</span>
-        <span class="pill" title="nye kort lært">🌱 ${s.newLearned}</span>
+        <span class="pill" title="cards answered">📇 ${s.total}</span>
+        <span class="pill" title="share correct">✓ ${pct} %</span>
+        <span class="pill" title="new cards learned">🌱 ${s.newLearned}</span>
       </div>
     </div></div>
-    <p style="text-align:center"><button class="primary" onclick="location.hash='#home'">Til hjem</button></p>`;
+    <p style="text-align:center"><button class="primary" onclick="location.hash='#home'">Back home</button></p>`;
   maybeAutoSync();
   session = null;
 }
@@ -705,10 +705,10 @@ function noteFor(ref) {
 
 /* ========== bla ========== */
 function stateLabel(st) {
-  if (!st || st.due === 0) return "ny";
-  if (st.suspended) return "suspendert";
+  if (!st || st.due === 0) return "new";
+  if (st.suspended) return "suspended";
   if (isLeech(st)) return "leech";
-  return isMature(st) ? "moden" : "ung";
+  return isMature(st) ? "mature" : "young";
 }
 
 function viewBrowse() {
@@ -717,10 +717,10 @@ function viewBrowse() {
   if (!deck) {
     const rows = decks().map(d =>
       `<div class="deckrow"><a href="#browse/${encodeURIComponent(d.id)}"><strong>${esc(d.title)}</strong></a>
-       <span class="counts">${d.lessons.reduce((n, l) => n + l.cards.length, 0)} kort · ${d.lessons.length} leksjoner
-       ${d.own ? `· <span class="badge">eget</span> <button class="small" data-share="${esc(d.id)}">🔗 del</button>` : ""}</span></div>`).join("");
-    app.innerHTML = `<h1>Bla i tema</h1>${rows || '<p class="muted">Ingen tema.</p>'}
-      ${aiAvailable() ? `<button id="genbtn" class="primary" style="margin-top:1rem">✨ Generer kort med KI</button>` : ""}`;
+       <span class="counts">${d.lessons.reduce((n, l) => n + l.cards.length, 0)} cards · ${d.lessons.length} lessons
+       ${d.own ? `· <span class="badge">own</span> <button class="small" data-share="${esc(d.id)}">🔗 share</button>` : ""}</span></div>`).join("");
+    app.innerHTML = `<h1>Browse decks</h1>${rows || '<p class="muted">No decks.</p>'}
+      ${aiAvailable() ? `<button id="genbtn" class="primary" style="margin-top:1rem">✨ Generate cards with AI</button>` : ""}`;
     const g = $("#genbtn"); if (g) g.onclick = () => generateDialog();
     app.querySelectorAll("[data-share]").forEach(b => b.onclick = () => shareDeck(b.dataset.share));
     return;
@@ -737,22 +737,22 @@ function viewBrowse() {
       const st = progress[key];
       const frontVal = r.rev ? r.c.back : r.c.front;
       const label = stateLabel(st);
-      return `<tr><td>${contentHtml(frontVal)} ${r.rev ? '<span class="badge">omvendt</span>' : ""}</td>
-        <td><span class="badge ${label === "leech" ? "leech" : label === "ny" ? "new" : ""}">${label}</span></td>
-        <td>${st?.suspended ? `<button class="small" data-wake="${esc(key)}">vekk</button>` : ""}
-            ${st && isLeech(st) && aiAvailable() ? `<button class="small" data-rewrite="${esc(key)}">✨ omskriv</button>` : ""}</td></tr>`;
+      return `<tr><td>${contentHtml(frontVal)} ${r.rev ? '<span class="badge">reversed</span>' : ""}</td>
+        <td><span class="badge ${label === "leech" ? "leech" : label === "new" ? "new" : ""}">${label}</span></td>
+        <td>${st?.suspended ? `<button class="small" data-wake="${esc(key)}">wake</button>` : ""}
+            ${st && isLeech(st) && aiAvailable() ? `<button class="small" data-rewrite="${esc(key)}">✨ rewrite</button>` : ""}</td></tr>`;
     }).join("");
     return `<div class="lesson"><h3>${open.has(l.id) ? "🔓" : "🔒"} ${esc(l.title)}
-        <span class="muted small">(${learned}/${refs.length} lært)</span>
-        <button class="iconbtn" data-practice="${esc(l.id)}" title="Øv på denne leksjonen nå">▶</button>
-        ${!open.has(l.id) ? `<button class="small" data-unlock="${esc(l.id)}">lås opp</button>` : ""}</h3>
+        <span class="muted small">(${learned}/${refs.length} learned)</span>
+        <button class="iconbtn" data-practice="${esc(l.id)}" title="Practice this lesson now">▶</button>
+        ${!open.has(l.id) ? `<button class="small" data-unlock="${esc(l.id)}">unlock</button>` : ""}</h3>
       ${l.note ? `<p class="muted small">${esc(l.note)}</p>` : ""}
       <table class="cardlist">${rows}</table></div>`;
   }).join("");
 
-  app.innerHTML = `<p><a href="#browse">← alle tema</a></p><h1>${esc(deck.title)}</h1>
-    ${aiAvailable() ? `<button id="genbtn">✨ Generer flere kort</button>` : ""}
-    <button class="danger" id="rmdeck">Fjern tema fra appen</button>
+  app.innerHTML = `<p><a href="#browse">← all decks</a></p><h1>${esc(deck.title)}</h1>
+    ${aiAvailable() ? `<button id="genbtn">✨ Generate more cards</button>` : ""}
+    <button class="danger" id="rmdeck">Remove deck from app</button>
     ${lessonsHtml}`;
   typeset(app);
   app.querySelectorAll("[data-practice]").forEach(b => b.onclick = () => startPractice(deck.id, b.dataset.practice));
@@ -766,7 +766,7 @@ function viewBrowse() {
   app.querySelectorAll("[data-rewrite]").forEach(b => b.onclick = () => rewriteDialog(deck, b.dataset.rewrite));
   const g = $("#genbtn"); if (g) g.onclick = () => generateDialog(deck.id);
   $("#rmdeck").onclick = () => {
-    if (!confirm(`Fjerne «${deck.title}»? Fremgangen beholdes.`)) return;
+    if (!confirm(`Remove "${deck.title}"? Your progress is kept.`)) return;
     store.patch(s => { delete s.decksCache[deck.id]; });
     location.hash = "#browse";
   };
@@ -776,35 +776,35 @@ function viewBrowse() {
 const CATALOG_INDEX_URL = "https://raw.githubusercontent.com/hmelberg/flash-decks/main/index.json";
 
 async function viewExplore() {
-  app.innerHTML = `<h1>Utforsk</h1><p class="muted">Henter katalog …</p>`;
+  app.innerHTML = `<h1>Explore</h1><p class="muted">Loading catalog …</p>`;
   let index;
   try {
     const r = await fetch(CATALOG_INDEX_URL, { cache: "no-cache" });
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     index = await r.json();
   } catch (e) {
-    app.innerHTML = `<h1>Utforsk</h1>
-      <p class="muted">Klarte ikke å hente katalogen (${esc(e.message)}). Prøv igjen senere.</p>`;
+    app.innerHTML = `<h1>Explore</h1>
+      <p class="muted">Could not load the catalog (${esc(e.message)}). Try again later.</p>`;
     return;
   }
   if (currentView() !== "explore") return; // brukeren navigerte videre mens vi ventet
   const topics = {};
-  for (const d of index) (topics[d.topic || "Annet"] ??= []).push(d);
+  for (const d of index) (topics[d.topic || "Other"] ??= []).push(d);
   const mine = store.get().decksCache;
-  app.innerHTML = `<h1>Utforsk</h1>` + Object.entries(topics).map(([topic, ds]) => `
+  app.innerHTML = `<h1>Explore</h1>` + Object.entries(topics).map(([topic, ds]) => `
     <h2>${esc(topic)}</h2>
     <div class="deckgrid">${ds.map(d => `<div class="decktile">
       <h3>${esc(d.title)}</h3>
-      <p class="muted small">${d.cards ?? "?"} kort${d.author ? " · " + esc(d.author) : ""}</p>
+      <p class="muted small">${d.cards ?? "?"} cards${d.author ? " · " + esc(d.author) : ""}</p>
       <div class="tilebtns">${mine[d.id]
-        ? `<span class="muted small">✓ lagt til</span>`
-        : `<button class="primary" data-cat="${esc(new URL(d.url, CATALOG_INDEX_URL).href)}">Legg til</button>`}</div>
+        ? `<span class="muted small">✓ added</span>`
+        : `<button class="primary" data-cat="${esc(new URL(d.url, CATALOG_INDEX_URL).href)}">Add</button>`}</div>
       </div>`).join("")}</div>`).join("")
-    + `<p class="muted small" style="margin-top:1.5rem">Har du laget et tema andre kan ha glede av?
-       <a href="${CATALOG_INDEX_URL.replace("raw.githubusercontent.com", "github.com").replace("/main/index.json", "")}" target="_blank">Send en pull request til katalogen</a>.</p>`;
+    + `<p class="muted small" style="margin-top:1.5rem">Made a deck others might enjoy?
+       <a href="${CATALOG_INDEX_URL.replace("raw.githubusercontent.com", "github.com").replace("/main/index.json", "")}" target="_blank">Send a pull request to the catalog</a>.</p>`;
   app.querySelectorAll("[data-cat]").forEach(b => b.onclick = async () => {
     try { await loadDeckFromUrl(b.dataset.cat); location.hash = "#home"; }
-    catch (e) { alert("Klarte ikke å hente temaet: " + e.message); }
+    catch (e) { alert("Could not fetch the deck: " + e.message); }
   });
 }
 
@@ -826,10 +826,10 @@ function viewStats() {
     }
   }
   const retention = mTot ? Math.round(100 * mOk / mTot) : null;
-  const retMsg = retention == null ? "for få modne repetisjoner ennå"
-    : retention > 95 ? "svært høy — intervallene er kanskje for forsiktige"
-    : retention < 80 ? "lav — intervallene er kanskje for aggressive"
-    : "i det sunne området (80–95 %)";
+  const retMsg = retention == null ? "too few mature reviews yet"
+    : retention > 95 ? "very high — intervals may be too cautious"
+    : retention < 80 ? "low — intervals may be too aggressive"
+    : "in the healthy range (80–95 %)";
   const days = [...Array(14)].map((_, i) => todayKey(now - (13 - i) * DAY));
   const max = Math.max(1, ...days.map(d => perDay[d] || 0));
   const bars = days.map(d => {
@@ -837,11 +837,11 @@ function viewStats() {
     return `<div class="bar" style="height:${Math.round(100 * v / max)}%" title="${d}: ${v}"><span>${v || ""}</span></div>`;
   }).join("");
 
-  app.innerHTML = `<h1>Statistikk</h1>
-    <p><strong>Retensjon (modne kort, 30 d):</strong> ${retention == null ? "–" : retention + " %"}
+  app.innerHTML = `<h1>Stats</h1>
+    <p><strong>Retention (mature cards, 30 d):</strong> ${retention == null ? "–" : retention + " %"}
        <span class="muted small">— ${retMsg}</span></p>
-    <p>${nNew} nye · ${nYoung} unge · ${nMature} modne</p>
-    <h2>Repetisjoner siste 14 dager</h2>
+    <p>${nNew} new · ${nYoung} young · ${nMature} mature</p>
+    <h2>Reviews, last 14 days</h2>
     <div class="bars">${bars}</div>`;
 }
 
@@ -849,42 +849,42 @@ function viewStats() {
 function viewSettings() {
   const s = store.get().settings;
   const last = store.get().meta.lastSync;
-  app.innerHTML = `<h1>Innstillinger</h1>
-    <h2>Læring</h2>
-    <label>Nye kort per dag</label><input id="s-new" type="number" min="0" max="100" value="${s.newPerDay}" style="max-width:6rem">
-    <label title="Standard er stille — 🔊-knappen på kortet leser alltid opp ved behov"><input type="checkbox" id="s-autoread" ${s.autoRead ? "checked" : ""} style="width:auto"> 🔊 Les opp svaret automatisk</label>
-    <label title="Leses med egen stemme og på spørsmålssidens språk"><input type="checkbox" id="s-readquestion" ${s.readQuestion ? "checked" : ""} style="width:auto"> 🔊 Les opp spørsmålet automatisk</label>
-    <label title="Gjelder både automatisk og manuell opplesing"><input type="checkbox" id="s-readexample" ${s.readExample ? "checked" : ""} style="width:auto"> Les også opp eksempelsetningen</label>
-    <h2>KI (valgfritt)</h2>
-    <p class="muted small">Appen virker fint uten — dette skrur på forklaringer, kortgenerering og omskriving.
-       Nøkkelen sendes kun til KI-leverandøren du velger${store.get().auth ? ", og synkes til din egen lagring" : " og lagres kun i denne nettleseren"}.</p>
-    <label>Leverandør</label>
+  app.innerHTML = `<h1>Settings</h1>
+    <h2>Learning</h2>
+    <label>New cards per day</label><input id="s-new" type="number" min="0" max="100" value="${s.newPerDay}" style="max-width:6rem">
+    <label title="Silent by default — the 🔊 button on the card always reads aloud on demand"><input type="checkbox" id="s-autoread" ${s.autoRead ? "checked" : ""} style="width:auto"> 🔊 Read the answer aloud automatically</label>
+    <label title="Read with its own voice, in the question side's language"><input type="checkbox" id="s-readquestion" ${s.readQuestion ? "checked" : ""} style="width:auto"> 🔊 Read the question aloud automatically</label>
+    <label title="Applies to both automatic and manual read-aloud"><input type="checkbox" id="s-readexample" ${s.readExample ? "checked" : ""} style="width:auto"> Also read the example sentence</label>
+    <h2>AI (optional)</h2>
+    <p class="muted small">The app works fine without it — this enables explanations, card generation and rewriting.
+       Your key is only sent to the AI provider you choose${store.get().auth ? ", and syncs to your own storage" : " and is stored only in this browser"}.</p>
+    <label>Provider</label>
     <select id="s-aiprovider">
       <option value="anthropic" ${s.aiProvider !== "openai" ? "selected" : ""}>Anthropic (Claude)</option>
-      <option value="openai" ${s.aiProvider === "openai" ? "selected" : ""}>OpenAI-kompatibel (OpenRouter, Gemini, Groq, Ollama …)</option>
+      <option value="openai" ${s.aiProvider === "openai" ? "selected" : ""}>OpenAI-compatible (OpenRouter, Gemini, Groq, Ollama …)</option>
     </select>
     <div id="s-baseurlrow" class="${s.aiProvider === "openai" ? "" : "hidden"}">
-      <label>Base-URL</label><input id="s-baseurl" value="${esc(s.aiBaseUrl)}" placeholder="https://openrouter.ai/api/v1">
-      <p class="muted small">api.openai.com kan ikke kalles direkte fra nettleser (CORS) — bruk f.eks. OpenRouter.</p>
+      <label>Base URL</label><input id="s-baseurl" value="${esc(s.aiBaseUrl)}" placeholder="https://openrouter.ai/api/v1">
+      <p class="muted small">api.openai.com cannot be called directly from a browser (CORS) — use e.g. OpenRouter.</p>
     </div>
-    <label>API-nøkkel</label><input id="s-key" type="password" value="${esc(s.apiKey)}" placeholder="sk-…">
-    <label>Modell</label><input id="s-model" value="${esc(s.model)}">
-    <h2>Konto og synk</h2>
-    <div id="acct"><p class="muted small">Laster …</p></div>
-    <label><input type="checkbox" id="s-autosync" ${s.autoSync ? "checked" : ""} style="width:auto"> Synk automatisk etter hver økt</label>
-    <p><button id="syncnow">Synk nå</button>
-       <span class="muted small">${last ? "sist synket " + new Date(last).toLocaleString("no") : "aldri synket"}</span></p>
+    <label>API key</label><input id="s-key" type="password" value="${esc(s.apiKey)}" placeholder="sk-…">
+    <label>Model</label><input id="s-model" value="${esc(s.model)}">
+    <h2>Account & sync</h2>
+    <div id="acct"><p class="muted small">Loading …</p></div>
+    <label><input type="checkbox" id="s-autosync" ${s.autoSync ? "checked" : ""} style="width:auto"> Sync automatically after each session</label>
+    <p><button id="syncnow">Sync now</button>
+       <span class="muted small">${last ? "last synced " + new Date(last).toLocaleString() : "never synced"}</span></p>
     <p id="syncstatus" class="small"></p>
     <details style="margin:.6rem 0">
-      <summary class="muted small">Avansert: synk med egen PAT (uten innlogging)</summary>
-      <p class="muted small">Bruk en fine-grained PAT begrenset til ett repo (Contents: read/write). Lagres kun lokalt.</p>
-      <label>Repo (eier/navn)</label><input id="s-repo" value="${esc(s.ghRepo)}" placeholder="hmelberg/flash-data">
+      <summary class="muted small">Advanced: sync with your own PAT (no login)</summary>
+      <p class="muted small">Use a fine-grained PAT limited to one repo (Contents: read/write). Stored locally only.</p>
+      <label>Repo (owner/name)</label><input id="s-repo" value="${esc(s.ghRepo)}" placeholder="hmelberg/flash-data">
       <label>Personal Access Token</label><input id="s-pat" type="password" value="${esc(s.ghPat)}">
     </details>
-    <p style="margin-top:1rem"><button id="save" class="primary">Lagre innstillinger</button></p>
+    <p style="margin-top:1rem"><button id="save" class="primary">Save settings</button></p>
     <h2>Backup</h2>
-    <p><button id="export">Eksporter alt (JSON)</button>
-       <button id="importbtn">Importer …</button>
+    <p><button id="export">Export everything (JSON)</button>
+       <button id="importbtn">Import …</button>
        <input type="file" id="importfile" accept=".json" class="hidden"></p>`;
 
   renderAccount($("#acct"));
@@ -904,7 +904,7 @@ function viewSettings() {
       d.settings.autoSync = $("#s-autosync").checked;
       d.meta.settingsUpdatedAt = Date.now();
     });
-    $("#syncstatus").textContent = "Lagret.";
+    $("#syncstatus").textContent = "Saved.";
   };
   $("#syncnow").onclick = () => syncNow($("#syncstatus"));
   $("#export").onclick = () => {
@@ -918,10 +918,10 @@ function viewSettings() {
   $("#importfile").onchange = async (e) => {
     try {
       const data = JSON.parse(await e.target.files[0].text());
-      if (!data.progress || !data.settings) throw new Error("ligner ikke på en flash-backup");
+      if (!data.progress || !data.settings) throw new Error("does not look like a flash backup");
       localStorage.setItem(KEY, JSON.stringify(data));
       location.reload();
-    } catch (err) { $("#syncstatus").textContent = "Import feilet: " + err.message; }
+    } catch (err) { $("#syncstatus").textContent = "Import failed: " + err.message; }
   };
 }
 
@@ -929,21 +929,21 @@ async function renderAccount(el) {
   const a = store.get().auth;
   if (a) {
     el.innerHTML = `<p>${a.user.avatar ? `<img src="${esc(a.user.avatar)}" alt="" style="width:24px;height:24px;border-radius:50%;vertical-align:middle"> ` : ""}
-      Logget inn som <strong>${esc(a.user.name)}</strong> (${a.provider === "github" ? "GitHub" : "Google"}) —
-      innstillinger, API-nøkkel, fremgang og egne tema synkes hit.
-      <button id="logout" class="linkish">Logg ut</button></p>`;
+      Signed in as <strong>${esc(a.user.name)}</strong> (${a.provider === "github" ? "GitHub" : "Google"}) —
+      settings, API key, progress and your own decks sync here.
+      <button id="logout" class="linkish">Sign out</button></p>`;
     $("#logout", el).onclick = () => { store.patch(s => { s.auth = null; }); viewSettings(); };
     return;
   }
   const cfg = await authConfig();
   if (!cfg || (!cfg.github_client_id && !cfg.google_client_id)) {
-    el.innerHTML = `<p class="muted small">Innlogging er ikke satt opp på denne serveren — bruk PAT under «Avansert» hvis du vil synke.</p>`;
+    el.innerHTML = `<p class="muted small">Sign-in is not configured on this server — use a PAT under "Advanced" if you want sync.</p>`;
     return;
   }
   el.innerHTML = `<p>
-      ${cfg.github_client_id ? `<button id="login-gh">Logg inn med GitHub</button>` : ""}
-      ${cfg.google_client_id ? `<button id="login-g">Logg inn med Google</button>` : ""}</p>
-    <p class="muted small">Alt lagres i din egen GitHub / Google Drive — ingen sentral database.</p>`;
+      ${cfg.github_client_id ? `<button id="login-gh">Sign in with GitHub</button>` : ""}
+      ${cfg.google_client_id ? `<button id="login-g">Sign in with Google</button>` : ""}</p>
+    <p class="muted small">Everything is stored in your own GitHub / Google Drive — no central database.</p>`;
   const gh = $("#login-gh", el); if (gh) gh.onclick = () => startLogin("github");
   const g = $("#login-g", el); if (g) g.onclick = () => startLogin("google");
 }
@@ -962,7 +962,7 @@ async function authConfig() {
 
 async function startLogin(provider) {
   const cfg = await authConfig();
-  if (!cfg) { alert("Innlogging er ikke tilgjengelig på denne serveren."); return; }
+  if (!cfg) { alert("Sign-in is not available on this server."); return; }
   const state = provider + ":" + crypto.randomUUID();
   sessionStorage.setItem("flash:oauthstate", state);
   const ru = encodeURIComponent(APP_URL());
@@ -978,7 +978,7 @@ async function handleOAuthCallback() {
   history.replaceState(null, "", APP_URL() + location.hash); // fjern code fra URL-en
   const expected = sessionStorage.getItem("flash:oauthstate");
   sessionStorage.removeItem("flash:oauthstate");
-  if (state !== expected) { alert("Innlogging avbrutt: state stemmer ikke."); return; }
+  if (state !== expected) { alert("Sign-in aborted: state mismatch."); return; }
   const provider = state.split(":")[0];
   try {
     const r = await fetch("/api/auth", {
@@ -999,17 +999,17 @@ async function handleOAuthCallback() {
       store.patch(s => { s.auth = { provider, token: t.access_token,
         refreshToken: t.refresh_token || "",
         expiresAt: Date.now() + (t.expires_in || 3600) * 1000,
-        user: { name: u.name || u.email || "Google-bruker", avatar: u.picture || "" } }; });
+        user: { name: u.name || u.email || "Google user", avatar: u.picture || "" } }; });
     }
     syncNow(null, true); // hent alt til den nye enheten med en gang
-  } catch (e) { alert("Innlogging feilet: " + e.message); }
+  } catch (e) { alert("Sign-in failed: " + e.message); }
 }
 
 /* ========== synk (adapterbasert) ========== */
 // Gyldig Google-token: refresher via auth-funksjonen når det er utløpt.
 async function googleAccessToken() {
   const a = store.get().auth;
-  if (!a || a.provider !== "google") throw new Error("Ikke logget inn med Google.");
+  if (!a || a.provider !== "google") throw new Error("Not signed in with Google.");
   if (Date.now() < (a.expiresAt || 0) - 60000) return a.token;
   const r = await fetch("/api/auth", {
     method: "POST", headers: { "content-type": "application/json" },
@@ -1017,7 +1017,7 @@ async function googleAccessToken() {
   });
   if (!r.ok) {
     store.patch(s => { s.auth = null; });
-    throw new Error("Google-innloggingen er utløpt — logg inn på nytt.");
+    throw new Error("Your Google sign-in has expired — sign in again.");
   }
   const t = await r.json();
   store.patch(s => { s.auth.token = t.access_token; s.auth.expiresAt = Date.now() + (t.expires_in || 3600) * 1000; });
@@ -1035,9 +1035,9 @@ function activeStore() {
 async function syncNow(statusEl, silent = false) {
   const say = (m) => { if (statusEl) statusEl.textContent = m; };
   const st = activeStore();
-  if (!st) { say("Logg inn (eller sett PAT under Avansert) for å synke."); return; }
+  if (!st) { say("Sign in (or set a PAT under Advanced) to sync."); return; }
   try {
-    say("Synker …");
+    say("Syncing …");
     // 1) fremgang — merge, skriv, prøv én gang til ved versjonskonflikt
     let attempt = 0;
     while (true) {
@@ -1082,10 +1082,10 @@ async function syncNow(statusEl, silent = false) {
       }
     }
     store.patch(s => { s.meta.lastSync = Date.now(); });
-    say("Synket ✓");
+    say("Synced ✓");
   } catch (e) {
-    say("Synk feilet: " + e.message);
-    if (!silent && !statusEl) alert("Synk feilet: " + e.message);
+    say("Sync failed: " + e.message);
+    if (!silent && !statusEl) alert("Sync failed: " + e.message);
   }
 }
 function maybeAutoSync() {
@@ -1131,13 +1131,13 @@ function infoModal(ref) {
   const deck = session.deck;
   const dlg = openDialog(`<div style="padding:1.1rem 1.3rem">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem">
-      <strong>Mer info</strong>
-      <button class="iconbtn" id="mi-close" title="Lukk (Esc)">✕</button></div>
+      <strong>More info</strong>
+      <button class="iconbtn" id="mi-close" title="Close (Esc)">✕</button></div>
     <div id="mi-body"></div>
     <p id="mi-actions" style="margin:.6rem 0 0"></p>
     ${aiAvailable() ? `<form id="mi-form" style="display:flex;gap:.5rem;margin-top:.6rem">
-      <input id="mi-q" placeholder="Still et oppfølgingsspørsmål …" autocomplete="off">
-      <button class="primary">Spør</button></form>` : ""}
+      <input id="mi-q" placeholder="Ask a follow-up question …" autocomplete="off">
+      <button class="primary">Ask</button></form>` : ""}
   </div>`);
   $("#mi-close", dlg).onclick = () => dlg.close();
   const body = $("#mi-body", dlg);
@@ -1151,7 +1151,7 @@ function infoModal(ref) {
   }
 
   if (!aiAvailable()) {
-    if (!card.info) body.innerHTML = `<p class="muted small">Ingen ekstra info på dette kortet.</p>`;
+    if (!card.info) body.innerHTML = `<p class="muted small">No extra info on this card.</p>`;
     return;
   }
 
@@ -1176,22 +1176,22 @@ function infoModal(ref) {
       messages.push({ role: "assistant", content: text });
       out.className = "ai-out mdbox";
       mdRender(out, text);
-      if (resp.stop_reason === "refusal") out.append("[Modellen avslo å svare.]");
+      if (resp.stop_reason === "refusal") out.append("[The model declined to answer.]");
       if (saveable) {
-        actions.innerHTML = `<button class="linkish" id="mi-note">lagre som notat på kortet</button>`;
+        actions.innerHTML = `<button class="linkish" id="mi-note">save as a note on the card</button>`;
         $("#mi-note", dlg).onclick = () => {
           const key = progressKey(ref.deckId, ref.cardId, ref.rev);
           store.patch(st => { st.meta.notes[key] = text; });
-          actions.innerHTML = `<span class="muted small">lagret ✓</span>`;
+          actions.innerHTML = `<span class="muted small">saved ✓</span>`;
         };
       }
     } catch (e) {
-      if (e.name !== "AbortError") out.textContent += "\n[Feil: " + aiError(e) + "]";
+      if (e.name !== "AbortError") out.textContent += "\n[Error: " + aiError(e) + "]";
     } finally { busy = false; }
   }
 
   if (card.info) {
-    actions.innerHTML = `<button class="linkish" id="mi-explain">✨ be KI forklare mer</button>`;
+    actions.innerHTML = `<button class="linkish" id="mi-explain">✨ ask AI to explain more</button>`;
     $("#mi-explain", dlg).onclick = () => { actions.innerHTML = ""; ask("Explain this card: why the answer is what it is, memory hooks, common confusions, one or two extra examples. Max ~250 words.", { saveable: true }); };
   } else {
     ask("Explain this card: why the answer is what it is, memory hooks, common confusions, one or two extra examples. Max ~250 words.", { saveable: true });
@@ -1284,25 +1284,25 @@ function generateDialog(defaultDeckId) {
   const deckOpts = all.map(d =>
     `<option value="${esc(d.id)}" ${d.id === defaultDeckId ? "selected" : ""}>${esc(d.title)}</option>`).join("");
   const dlg = openDialog(`<form method="dialog" style="padding:1.2rem">
-    <h2 style="margin-top:0">✨ Generer kort</h2>
-    <label>Hva skal kortene handle om?</label><input id="g-topic" placeholder="f.eks. russiske verb for bevegelse — eller vinkling på dokumentet under">
-    <label>Dokument (valgfritt — kortene trekkes da ut av innholdet)</label>
-    <textarea id="g-doc" rows="4" placeholder="Lim inn tekst her …"></textarea>
-    <div class="addrow"><button type="button" id="g-docfile" class="linkish">📄 hent fra fil (.txt/.md/.pdf)</button>
+    <h2 style="margin-top:0">✨ Generate cards</h2>
+    <label>What should the cards be about?</label><input id="g-topic" placeholder="e.g. Russian verbs of motion — or an angle on the document below">
+    <label>Document (optional — cards are then extracted from the content)</label>
+    <textarea id="g-doc" rows="4" placeholder="Paste text here …"></textarea>
+    <div class="addrow"><button type="button" id="g-docfile" class="linkish">📄 load from file (.txt/.md/.pdf)</button>
       <span id="g-doccount" class="muted small"></span>
       <input type="file" id="g-docpick" accept=".txt,.md,.markdown,.pdf,text/plain,application/pdf" class="hidden"></div>
-    <label>Antall</label><input id="g-count" type="number" min="1" max="150" placeholder="ca 100" style="max-width:6.5rem">
-    <label>Nivå</label><input id="g-level" placeholder="f.eks. nybegynner">
-    <label>Ekstra instruks (valgfritt)</label><textarea id="g-extra" rows="2"></textarea>
-    <label>Legg i tema</label>
-    <select id="g-deck">${deckOpts}<option value="__new__">— nytt tema —</option></select>
-    <div id="g-newdeck" class="hidden"><label>Navn på nytt tema</label><input id="g-newtitle"></div>
-    <label>Plassering</label><select id="g-lesson"></select>
+    <label>Count</label><input id="g-count" type="number" min="1" max="150" placeholder="about 100" style="max-width:6.5rem">
+    <label>Level</label><input id="g-level" placeholder="e.g. beginner">
+    <label>Extra instructions (optional)</label><textarea id="g-extra" rows="2"></textarea>
+    <label>Add to deck</label>
+    <select id="g-deck">${deckOpts}<option value="__new__">— new deck —</option></select>
+    <div id="g-newdeck" class="hidden"><label>Name of new deck</label><input id="g-newtitle"></div>
+    <label>Placement</label><select id="g-lesson"></select>
     <div id="g-preview" style="max-height:45vh;overflow-y:auto"></div>
     <p id="g-status" class="small muted"></p>
     <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:.8rem">
-      <button value="cancel" formnovalidate>Lukk</button>
-      <button type="button" id="g-run" class="primary">Generer</button>
+      <button value="cancel" formnovalidate>Close</button>
+      <button type="button" id="g-run" class="primary">Generate</button>
     </div></form>`);
 
   const lessonSel = $("#g-lesson", dlg);
@@ -1310,9 +1310,9 @@ function generateDialog(defaultDeckId) {
     const id = $("#g-deck", dlg).value;
     $("#g-newdeck", dlg).classList.toggle("hidden", id !== "__new__");
     const deck = store.get().decksCache[id];
-    lessonSel.innerHTML = `<option value="__auto__">— nye leksjoner (KI strukturerer) —</option>` +
+    lessonSel.innerHTML = `<option value="__auto__">— new lessons (AI structures them) —</option>` +
       (deck ? deck.lessons.map(l =>
-        `<option value="${esc(l.id)}">legg til i: ${esc(l.title)}</option>`).join("") : "");
+        `<option value="${esc(l.id)}">add to: ${esc(l.title)}</option>`).join("") : "");
   }
   fillLessons();
   $("#g-deck", dlg).onchange = fillLessons;
@@ -1325,8 +1325,8 @@ function generateDialog(defaultDeckId) {
   const suggestedCount = () => Math.min(150, Math.max(5, Math.round(docWords() / 100)));
   function updateDocInfo() {
     const w = docWords();
-    $("#g-doccount", dlg).textContent = w ? `${w} ord → forslag ca ${suggestedCount()} kort` : "";
-    $("#g-count", dlg).placeholder = w ? `ca ${suggestedCount()}` : "ca 100";
+    $("#g-doccount", dlg).textContent = w ? `${w} words → suggest about ${suggestedCount()} cards` : "";
+    $("#g-count", dlg).placeholder = w ? `about ${suggestedCount()}` : "about 100";
   }
   $("#g-doc", dlg).oninput = updateDocInfo;
   $("#g-docfile", dlg).onclick = () => $("#g-docpick", dlg).click();
@@ -1335,13 +1335,13 @@ function generateDialog(defaultDeckId) {
     if (!f) return;
     try {
       if (f.type === "application/pdf" || /\.pdf$/i.test(f.name)) {
-        $("#g-doccount", dlg).textContent = "Leser PDF …";
+        $("#g-doccount", dlg).textContent = "Reading PDF …";
         $("#g-doc", dlg).value = await extractPdfText(f);
       } else {
         $("#g-doc", dlg).value = await f.text();
       }
     } catch (err) {
-      $("#g-doccount", dlg).textContent = "Kunne ikke lese fila: " + err.message;
+      $("#g-doccount", dlg).textContent = "Could not read the file: " + err.message;
       return;
     }
     updateDocInfo();
@@ -1351,12 +1351,12 @@ function generateDialog(defaultDeckId) {
     const topic = $("#g-topic", dlg).value.trim();
     const doc = $("#g-doc", dlg).value.trim();
     const status = $("#g-status", dlg);
-    if (!topic && !doc) { status.textContent = "Angi tema eller lim inn et dokument."; return; }
+    if (!topic && !doc) { status.textContent = "Enter a topic or paste a document."; return; }
     const s = store.get().settings;
     const targetDeck = store.get().decksCache[$("#g-deck", dlg).value];
     const toOneLesson = $("#g-lesson", dlg).value !== "__auto__";
     const count = +$("#g-count", dlg).value || 0;
-    status.textContent = "Genererer …";
+    status.textContent = "Generating …";
     try {
       let system = await fetchPrompt("prompts/generate-deck.md", GEN_FALLBACK);
       if (doc) system += "\n\n" + await fetchPrompt("prompts/extract-deck.md", EXTRACT_FALLBACK);
@@ -1378,12 +1378,12 @@ function generateDialog(defaultDeckId) {
           ($("#g-extra", dlg).value ? `Extra instructions: ${$("#g-extra", dlg).value}\n` : "") +
           (doc ? `\nDocument:\n<<<\n${doc}\n>>>` : "") }],
         output_config: { format: { type: "json_schema", schema: GEN_SCHEMA } },
-      }, { onText: (t) => { received += t.length; status.textContent = `Genererer … ${Math.round(received / 1000)} kB`; } });
-      if (resp.stop_reason === "refusal") throw new Error("Modellen avslo forespørselen.");
-      if (resp.stop_reason === "max_tokens") throw new Error("Svaret ble avkuttet — prøv færre kort.");
+      }, { onText: (t) => { received += t.length; status.textContent = `Generating … ${Math.round(received / 1000)} kB`; } });
+      if (resp.stop_reason === "refusal") throw new Error("The model declined the request.");
+      if (resp.stop_reason === "max_tokens") throw new Error("The reply was cut off — try fewer cards.");
       const lessons = JSON.parse(resp.content.find(b => b.type === "text").text).lessons;
       const total = lessons.reduce((n, l) => n + l.cards.length, 0);
-      status.textContent = `${total} kort i ${lessons.length} leksjon(er) — velg hva du vil beholde:`;
+      status.textContent = `${total} cards in ${lessons.length} lesson(s) — choose what to keep:`;
       $("#g-preview", dlg).innerHTML = lessons.map((l, li) => `
         <h3 style="margin:.7rem 0 .2rem">${esc(l.title)}</h3>
         ${l.cards.map((c, ci) => `
@@ -1392,7 +1392,7 @@ function generateDialog(defaultDeckId) {
           <span><strong>${esc(c.front)}</strong> → ${esc(c.back)}
             ${c.example ? `<br><span class="muted small">${esc(c.example.text)}</span>` : ""}</span>
         </label>`).join("")}`).join("") +
-        `<button type="button" id="g-save" class="primary" style="margin:.6rem 0">Lagre valgte</button>`;
+        `<button type="button" id="g-save" class="primary" style="margin:.6rem 0">Save selected</button>`;
       typeset($("#g-preview", dlg));
       $("#g-save", dlg).onclick = () => {
         const chosen = lessons.map((l, li) => ({ ...l,
@@ -1400,7 +1400,7 @@ function generateDialog(defaultDeckId) {
         })).filter(l => l.cards.length);
         saveGenerated(chosen, dlg, topic);
       };
-    } catch (e) { status.textContent = "Feil: " + aiError(e); }
+    } catch (e) { status.textContent = "Error: " + aiError(e); }
   };
 }
 
@@ -1411,7 +1411,7 @@ function saveGenerated(genLessons, dlg, topic) {
   store.patch(s => {
     let deck;
     if (deckSel === "__new__") {
-      const title = $("#g-newtitle", dlg).value.trim() || topic || genLessons[0].title || "Fra dokument";
+      const title = $("#g-newtitle", dlg).value.trim() || topic || genLessons[0].title || "From document";
       const id = "own-" + title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 30);
       deck = s.decksCache[id] || { id, title, own: true, settings: { tts: false }, lessons: [] };
       s.decksCache[id] = deck;
@@ -1459,11 +1459,11 @@ function rewriteDialog(deck, key) {
   const found = findCard(deck, cardId);
   if (!found) return;
   const dlg = openDialog(`<div style="padding:1.2rem">
-    <h2 style="margin-top:0">✨ Forslag til omskriving</h2>
-    <p class="muted small">Kortet feiler ofte — som regel er kortet problemet, ikke hukommelsen.</p>
+    <h2 style="margin-top:0">✨ Rewrite suggestions</h2>
+    <p class="muted small">This card fails often — usually the card is the problem, not your memory.</p>
     <div class="ai-out" id="rw-out"></div>
     <div style="display:flex;justify-content:flex-end;margin-top:.8rem">
-      <button onclick="this.closest('dialog').close()">Lukk</button></div></div>`);
+      <button onclick="this.closest('dialog').close()">Close</button></div></div>`);
   const out = $("#rw-out", dlg);
   const s = store.get().settings;
   aiMessage({
@@ -1473,7 +1473,7 @@ function rewriteDialog(deck, key) {
       `Context: ${deck.explainContext || deck.title}\nFront: ${typeof found.card.front === "object" ? found.card.front.html : found.card.front}\nBack: ${typeof found.card.back === "object" ? found.card.back.html : found.card.back}` }],
   }, { onText: (t) => { out.textContent += t; } })
     .then(() => typeset(out))
-    .catch(e => { out.textContent += "\n[Feil: " + aiError(e) + "]"; });
+    .catch(e => { out.textContent += "\n[Error: " + aiError(e) + "]"; });
 }
 
 /* ========== router & tastatur ========== */

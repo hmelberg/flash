@@ -72,13 +72,13 @@ test("openai: streaming (choices delta)", async () => {
 });
 
 test("openai uten baseUrl gir forklarende feil; HTTP-feil får status", async () => {
-  await assert.rejects(() => aiMessage({ aiProvider: "openai", apiKey: "K", aiBaseUrl: "" }, BODY), /base-URL/i);
+  await assert.rejects(() => aiMessage({ aiProvider: "openai", apiKey: "K", aiBaseUrl: "" }, BODY), /base URL/i);
   globalThis.fetch = async () => ({ ok: false, status: 429, json: async () => ({}) });
   await assert.rejects(() => aiMessage({ aiProvider: "anthropic", apiKey: "K" }, BODY), (e) => e.status === 429);
 });
 
 test("aiError oversetter kjente statuser", () => {
-  assert.match(aiError({ status: 401 }), /avvist/);
-  assert.match(aiError({ status: 429 }), /mange/);
+  assert.match(aiError({ status: 401 }), /rejected/);
+  assert.match(aiError({ status: 429 }), /Too many/);
   assert.equal(aiError(new Error("x")), "x");
 });

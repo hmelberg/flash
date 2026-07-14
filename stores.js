@@ -16,7 +16,7 @@ export const b64dec = (b64) => {
 
 const GH_HEADERS = (token) => ({ Authorization: `Bearer ${token}`, Accept: "application/vnd.github+json" });
 const authError = (hvem) => {
-  const e = new Error(`${hvem} avviste tokenet (401) — logg inn på nytt.`);
+  const e = new Error(`${hvem} rejected the token (401) — sign in again.`);
   e.auth = true; return e;
 };
 
@@ -67,12 +67,12 @@ export async function ensureGithubRepo(token, login, name = "flash-data") {
   const r = await fetch(`https://api.github.com/repos/${full}`, { headers: GH_HEADERS(token) });
   if (r.status === 401) throw authError("GitHub");
   if (r.ok) return full;
-  if (r.status !== 404) throw new Error(`GitHub repo-sjekk: HTTP ${r.status}`);
+  if (r.status !== 404) throw new Error(`GitHub repo check: HTTP ${r.status}`);
   const c = await fetch("https://api.github.com/user/repos", {
     method: "POST", headers: GH_HEADERS(token),
     body: JSON.stringify({ name, private: true, auto_init: true, description: "flash-data: synk for flash-appen" }),
   });
-  if (!c.ok) throw new Error(`Klarte ikke å opprette ${full}: HTTP ${c.status}`);
+  if (!c.ok) throw new Error(`Could not create ${full}: HTTP ${c.status}`);
   return full;
 }
 
@@ -89,7 +89,7 @@ export function driveStore({ getToken }) {
   }
   async function query(q) {
     const r = await req(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&fields=${encodeURIComponent("files(id,name)")}&pageSize=1000`);
-    if (!r.ok) throw new Error(`Drive-søk: HTTP ${r.status}`);
+    if (!r.ok) throw new Error(`Drive search: HTTP ${r.status}`);
     return (await r.json()).files || [];
   }
   async function folderId(sub, create) {
@@ -106,7 +106,7 @@ export function driveStore({ getToken }) {
         method: "POST", headers: { "content-type": "application/json" },
         body: JSON.stringify({ name, mimeType: "application/vnd.google-apps.folder", parents: [parent] }),
       });
-      if (!r.ok) throw new Error(`Drive-mappe: HTTP ${r.status}`);
+      if (!r.ok) throw new Error(`Drive folder: HTTP ${r.status}`);
       id = (await r.json()).id;
     }
     return (folderIds[key] = id);
@@ -149,7 +149,7 @@ export function driveStore({ getToken }) {
       const r = await req(`https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id`, {
         method: "POST", headers: { "content-type": `multipart/related; boundary=${boundary}` }, body,
       });
-      if (!r.ok) throw new Error(`Drive opprett ${path}: HTTP ${r.status}`);
+      if (!r.ok) throw new Error(`Drive create ${path}: HTTP ${r.status}`);
     },
     async list(prefix) {
       const sub = prefix.replace(/\/$/, "");
