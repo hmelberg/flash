@@ -165,7 +165,8 @@ import { aiMessage as aiCall, aiError } from "./ai.js";
 const KEY = "flash:v1";
 const DEFAULTS = {
   progress: {},
-  settings: { newPerDay: 10, autoRead: false, readQuestion: false, readExample: false, unlocked: [],
+  settings: { newPerDay: 10, autoRead: false, readQuestion: false, readExample: false,
+    flowMode: "free", unlocked: [], skipped: [],
     model: "claude-opus-4-8", apiKey: "", aiProvider: "anthropic", aiBaseUrl: "",
     ghRepo: "", ghPat: "", autoSync: true },
   auth: null,          // {provider, token, refreshToken?, expiresAt?, user:{name,avatar}, repo?}
@@ -852,6 +853,11 @@ function viewSettings() {
   app.innerHTML = `<h1>Settings</h1>
     <h2>Learning</h2>
     <label>New cards per day</label><input id="s-new" type="number" min="0" max="100" value="${s.newPerDay}" style="max-width:6rem">
+    <label title="Pacing only — the session summary always lets you continue with more">Lesson flow</label>
+    <select id="s-flowmode">
+      <option value="free" ${s.flowMode !== "guided" ? "selected" : ""}>Free — all lessons open (default)</option>
+      <option value="guided" ${s.flowMode === "guided" ? "selected" : ""}>Guided — lessons unlock step by step (80 % mastery)</option>
+    </select>
     <label title="Silent by default — the 🔊 button on the card always reads aloud on demand"><input type="checkbox" id="s-autoread" ${s.autoRead ? "checked" : ""} style="width:auto"> 🔊 Read the answer aloud automatically</label>
     <label title="Read with its own voice, in the question side's language"><input type="checkbox" id="s-readquestion" ${s.readQuestion ? "checked" : ""} style="width:auto"> 🔊 Read the question aloud automatically</label>
     <label title="Applies to both automatic and manual read-aloud"><input type="checkbox" id="s-readexample" ${s.readExample ? "checked" : ""} style="width:auto"> Also read the example sentence</label>
@@ -892,6 +898,7 @@ function viewSettings() {
   $("#save").onclick = () => {
     store.patch(d => {
       d.settings.newPerDay = Math.max(0, +$("#s-new").value || 0);
+      d.settings.flowMode = $("#s-flowmode").value;
       d.settings.autoRead = $("#s-autoread").checked;
       d.settings.readQuestion = $("#s-readquestion").checked;
       d.settings.readExample = $("#s-readexample").checked;

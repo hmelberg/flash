@@ -38,6 +38,11 @@ test("mergeSettings: høyest updatedAt vinner, kun whitelist-nøkler", () => {
   for (const k of Object.keys(m2.values)) assert.ok(SYNCED_SETTINGS.includes(k));
 });
 
+test("whitelisten inkluderer flyt-innstillingene", () => {
+  for (const k of ["flowMode", "unlocked", "skipped", "autoSync"])
+    assert.ok(SYNCED_SETTINGS.includes(k), k);
+});
+
 test("mergeSettings: remote=null gir lokal", () => {
   const m = mergeSettings({ values: { apiKey: "k" }, updatedAt: 0 }, null);
   assert.equal(m.source, "local");
