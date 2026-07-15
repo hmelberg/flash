@@ -56,26 +56,46 @@ test("søsken: bare eldste due vises, det andre begraves", () => {
   assert.equal(s.counts.buried, 1);
 });
 
-test("gating: l2 låst til 80 % av l1 har stability >= 7", () => {
+test("fri modus (default): alle leksjoner åpne uansett fremgang", () => {
+  assert.deepEqual(unlockedLessons(deck(), {}, {}), ["l1", "l2"]);
+  assert.deepEqual(unlockedLessons(deck(), {}, { flowMode: "free" }), ["l1", "l2"]);
+});
+
+test("guidet: l2 låst til 80 % av l1 har stability >= 7", () => {
+  const guided = { flowMode: "guided" };
   // l1 har 3 refs (a, a/r, b). 2/3 = 67 % < 80 % → låst
   let progress = {
     "d/a":   st({ stability: 10 }),
     "d/a/r": st({ stability: 10 }),
   };
-  assert.deepEqual(unlockedLessons(deck(), progress, {}), ["l1"]);
+  assert.deepEqual(unlockedLessons(deck(), progress, guided), ["l1"]);
   // 3/3 → åpen
   progress["d/b"] = st({ stability: 7 });
-  assert.deepEqual(unlockedLessons(deck(), progress, {}), ["l1", "l2"]);
+  assert.deepEqual(unlockedLessons(deck(), progress, guided), ["l1", "l2"]);
 });
 
-test("manuell opplåsing overstyrer gating", () => {
-  const settings = { unlocked: ["d/l2"] };
+test("guidet: manuell opplåsing overstyrer gating", () => {
+  const settings = { flowMode: "guided", unlocked: ["d/l2"] };
   assert.deepEqual(unlockedLessons(deck(), {}, settings), ["l1", "l2"]);
+});
+
+test("guidet: skipped leksjon kvalifiserer gaten for neste", () => {
+  const settings = { flowMode: "guided", skipped: ["d/l1"] };
+  assert.deepEqual(unlockedLessons(deck(), {}, settings), ["l1", "l2"]);
+});
+
+test("skipped leksjon gir ingen nye kort, men forfalte vises", () => {
+  const settings = { newPerDay: 10, skipped: ["d/l1"] };
+  const progress = { "d/a": st({ due: NOW - DAY, stability: 3 }) };
+  const s = buildSession({ deck: deck(), progress, settings, now: NOW, newLimitUsedToday: 0, rng: noShuffle });
+  assert.deepEqual(s.due.map(r => r.cardId), ["a"]); // forfalt vises fortsatt
+  const keys = s.newAvail.map(r => progressKey(r.deckId, r.cardId, r.rev));
+  assert.deepEqual(keys, ["d/c", "d/d"]); // l1 hoppes over, l2 er åpen (fri modus)
 });
 
 test("nye kort: rekkefølge, dagsgrense og aldri søsken i samme økt", () => {
   const s = buildSession({ deck: deck(), progress: {}, settings: { newPerDay: 2 }, now: NOW, newLimitUsedToday: 0, rng: noShuffle });
-  // l2 er låst; a/r hoppes over fordi a alt er med i økten → a, b
+  // forfatterrekkefølge; a/r hoppes over fordi a alt er med i økten → a, b
   assert.deepEqual(s.newAvail.map(r => progressKey(r.deckId, r.cardId, r.rev)), ["d/a", "d/b"]);
 });
 

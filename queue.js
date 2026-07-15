@@ -17,15 +17,20 @@ export function allRefs(deck) {
   return refs;
 }
 
-// Leksjons-ID-er som er åpne: l1 alltid; lN+1 når >= 80 % av lN har stability >= 7d.
-// settings.unlocked kan inneholde "deckId/lessonId" for manuell opplåsing.
+// Leksjons-ID-er som er åpne. Fri modus (standard): alle. Guidet: l1 alltid;
+// lN+1 når >= 80 % av lN har stability >= 7d; settings.unlocked ("deckId/lessonId")
+// låser opp manuelt, og skipped-leksjoner regnes som kvalifiserte.
 export function unlockedLessons(deck, progress, settings = {}) {
+  if ((settings.flowMode || "free") !== "guided")
+    return deck.lessons.map(l => l.id); // fri modus: alt åpent
+  const skipped = new Set(settings.skipped || []);
   const manual = new Set(settings.unlocked || []);
   const open = [];
   let prevOk = true;
   for (const lesson of deck.lessons) {
     const isOpen = prevOk || manual.has(`${deck.id}/${lesson.id}`);
     if (isOpen) open.push(lesson.id);
+    if (skipped.has(`${deck.id}/${lesson.id}`)) { prevOk = isOpen; continue; } // hoppet over: teller som kvalifisert
     // beregn om DENNE leksjonen kvalifiserer neste
     const refs = [];
     for (const card of lesson.cards) {
@@ -77,10 +82,12 @@ export function buildSession({ deck, progress, settings, now, newLimitUsedToday 
   // Søsken-regel gjelder også her: aldri kort + speilkort i samme økt.
   const inSession = new Set(due.map(r => `${r.deckId}/${r.cardId}`));
   const limit = Math.max(0, (settings.newPerDay ?? 10) - newLimitUsedToday);
+  const skippedSet = new Set(settings.skipped || []);
   const newAvail = [];
   for (const r of refs) {
     if (newAvail.length >= limit) break;
     if (!open.has(r.lessonId)) continue;
+    if (skippedSet.has(`${r.deckId}/${r.lessonId}`)) continue; // hoppet over: ingen nye
     const base = `${r.deckId}/${r.cardId}`;
     if (inSession.has(base)) { buried += 1; continue; }
     const st = progress[progressKey(r.deckId, r.cardId, r.rev)];
