@@ -730,7 +730,8 @@ function viewSummary() {
   maybeAutoSync();
   session = null;
   const more = $("#sum-more");
-  if (more) more.onclick = () => startSession(deckId, true, true);
+  // hash er allerede #session — render eksplisitt siden hashchange ikke fyrer
+  if (more) more.onclick = () => { startSession(deckId, true, true); render(); };
 }
 
 function noteFor(ref) {
