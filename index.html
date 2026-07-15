@@ -444,9 +444,11 @@ function gradeCard(grade) {
     s.progress[key] = next;
     if (wasNew) s.meta.newUsedByDay[todayKey()] = (s.meta.newUsedByDay[todayKey()] || 0) + 1;
   });
-  session.stats.total++;
-  session.stats[grade === "ok" ? "ok" : "fail"]++;
-  if (wasNew && grade === "ok") session.stats.newLearned++;
+  if (grade !== "never") { // «kan det»-parkering teller ikke som ok/fail
+    session.stats.total++;
+    session.stats[grade === "ok" ? "ok" : "fail"]++;
+    if (wasNew && grade === "ok") session.stats.newLearned++;
+  }
 
   if (requeued) {
     session.failCounts[key] = (session.failCounts[key] || 0) + 1;
@@ -471,9 +473,11 @@ function undoLast() {
     if (pos > -1) session.queue.splice(pos, 1);
     session.failCounts[u.key] = Math.max(0, (session.failCounts[u.key] || 1) - 1);
   }
-  session.stats.total--;
-  session.stats[u.grade === "ok" ? "ok" : "fail"]--;
-  if (u.wasNew && u.grade === "ok") session.stats.newLearned--;
+  if (u.grade !== "never") {
+    session.stats.total--;
+    session.stats[u.grade === "ok" ? "ok" : "fail"]--;
+    if (u.wasNew && u.grade === "ok") session.stats.newLearned--;
+  }
   session.idx = u.idx;
   session.flipped = false;
   session.undo = null;
@@ -656,6 +660,7 @@ function viewSession() {
     ${session.flipped ? `
       <div class="gradebar">
         <button class="fail" data-grade="fail" title="← or 1">✕ Not OK</button>
+        ${(!state || state.due === 0) ? `<button data-grade="never" title="I already know this — park it (~6 months, then yearly)">💤 Know it</button>` : ""}
         <button class="ok" data-grade="ok" title="space, → or 3">✓ OK</button>
       </div>` : ""}`;
 
@@ -686,6 +691,14 @@ function viewSession() {
 function viewSummary() {
   const s = session.stats;
   const pct = s.total ? Math.round(100 * s.ok / s.total) : 0;
+  // fri flyt: tilby å fortsette med flere nye kort forbi dagsgrensen
+  const deckId = session.deck.id;
+  let moreNew = 0;
+  if (!session.practice) {
+    const { progress, settings } = store.get();
+    moreNew = buildSession({ deck: session.deck, progress, settings,
+      now: Date.now(), newLimitUsedToday: 0 }).newAvail.length;
+  }
   app.innerHTML = `
     <div class="cardwrap" style="margin-top:1.4rem"><div class="card" style="cursor:default">
       <div class="side">🎉</div>
@@ -695,9 +708,13 @@ function viewSummary() {
         <span class="pill" title="new cards learned">🌱 ${s.newLearned}</span>
       </div>
     </div></div>
-    <p style="text-align:center"><button class="primary" onclick="location.hash='#home'">Back home</button></p>`;
+    <p style="text-align:center">
+      ${moreNew ? `<button class="primary" id="sum-more" title="Keep going — the scheduler will handle the reviews">＋${moreNew} more new cards</button> ` : ""}
+      <button ${moreNew ? "" : 'class="primary"'} onclick="location.hash='#home'">Back home</button></p>`;
   maybeAutoSync();
   session = null;
+  const more = $("#sum-more");
+  if (more) more.onclick = () => startSession(deckId, true, true);
 }
 
 function noteFor(ref) {
