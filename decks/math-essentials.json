@@ -1,0 +1,43 @@
+{
+  "id": "math-essentials",
+  "title": "Math essentials",
+  "explainContext": "Core algebra and geometry formulas every student should know by heart.",
+  "settings": { "tts": false },
+  "lessons": [
+    {
+      "id": "l01-powers",
+      "title": "Powers & roots",
+      "intro": "## Exponent rules as one system\n\nEvery exponent rule follows from a single idea: $a^n$ means *n copies of $a$ multiplied together*.\n\n- Multiplying stacks copies: $a^m \\cdot a^n = a^{m+n}$\n- A power of a power multiplies the counts: $(a^m)^n = a^{mn}$\n- Dividing removes copies: $a^m / a^n = a^{m-n}$ — which forces $a^0 = 1$ and $a^{-n} = 1/a^n$\n- Roots are fractional counts: $\\sqrt{a} = a^{1/2}$\n\nIf you remember the *idea*, you can rebuild any rule you forget.",
+      "cards": [
+        { "id": "prod-rule", "front": "$a^m \\cdot a^n = \\;?$", "back": "$a^{m+n}$" },
+        { "id": "power-rule", "front": "$(a^m)^n = \\;?$", "back": "$a^{mn}$" },
+        { "id": "quot-rule", "front": "$\\dfrac{a^m}{a^n} = \\;?$", "back": "$a^{m-n}$" },
+        { "id": "zero-exp", "front": "$a^0 = \\;?$ (for $a \\neq 0$)", "back": "$1$",
+          "hint": "Follow the quotient rule with $m = n$." },
+        { "id": "neg-exp", "front": "$a^{-n} = \\;?$", "back": "$\\dfrac{1}{a^n}$" },
+        { "id": "frac-exp", "front": "$a^{1/2} = \\;?$", "back": "$\\sqrt{a}$" },
+        { "id": "root-prod", "front": "$\\sqrt{a}\\,\\sqrt{b} = \\;?$", "back": "$\\sqrt{ab}$ (for $a, b \\ge 0$)" },
+        { "id": "sq-diff", "front": "$(a+b)(a-b) = \\;?$", "back": "$a^2 - b^2$",
+          "hint": "The 'difference of squares' — the middle terms cancel." }
+      ]
+    },
+    {
+      "id": "l02-geometry",
+      "title": "Geometry formulas",
+      "intro": "## Areas and volumes, organized\n\nMost formulas here come in pairs: a **boundary** measure (circumference, surface) and a **content** measure (area, volume). Content formulas carry one more factor of length than boundary formulas — that's why circle *circumference* is $2\\pi r$ (length¹) while *area* is $\\pi r^2$ (length²).\n\nSpot-check any formula you recall by counting dimensions: a volume must have three lengths multiplied, an area two.",
+      "cards": [
+        { "id": "circle-area", "front": "Area of a circle with radius $r$?", "back": "$\\pi r^2$" },
+        { "id": "circle-circ", "front": "Circumference of a circle with radius $r$?", "back": "$2\\pi r$" },
+        { "id": "triangle-area", "front": "Area of a triangle with base $b$ and height $h$?", "back": "$\\tfrac{1}{2} b h$" },
+        { "id": "pythagoras", "front": "Pythagoras: the sides $a, b$ and hypotenuse $c$ of a right triangle satisfy …?", "back": "$a^2 + b^2 = c^2$" },
+        { "id": "cylinder-vol", "front": "Volume of a cylinder with radius $r$ and height $h$?", "back": "$\\pi r^2 h$",
+          "hint": "Base area × height." },
+        { "id": "sphere-vol", "front": "Volume of a sphere with radius $r$?", "back": "$\\tfrac{4}{3} \\pi r^3$" },
+        { "id": "sphere-surf", "front": "Surface area of a sphere with radius $r$?", "back": "$4 \\pi r^2$",
+          "hint": "Exactly the derivative of the volume with respect to $r$." },
+        { "id": "cone-vol", "front": "Volume of a cone with base radius $r$ and height $h$?", "back": "$\\tfrac{1}{3} \\pi r^2 h$",
+          "hint": "A third of the surrounding cylinder." }
+      ]
+    }
+  ]
+}

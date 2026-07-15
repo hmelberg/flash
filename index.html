@@ -186,7 +186,7 @@ const todayKey = (t = Date.now()) => new Date(t).toISOString().slice(0, 10);
 const newUsedToday = () => store.get().meta.newUsedByDay[todayKey()] || 0;
 
 /* ========== deck-innlasting ========== */
-const BUILTIN = ["russian", "probability"];
+const BUILTIN = ["spanish-basics", "world-capitals", "math-essentials"];
 
 function validateDeck(d) {
   const fail = (msg) => { throw new Error(`Invalid deck: ${msg}`); };
@@ -668,7 +668,7 @@ function viewSession() {
       <span class="deckname">${esc(session.deck.title)}${session.practice ? ' <span class="badge" title="practice — cards that are not due are only rescheduled on fail">practice</span>' : ""}</span>
       <span class="right">${cardBadges(ref, state)}
         <span>${session.idx + 1} of ${session.queue.length}</span>
-        <span class="iconbtn" style="cursor:help" title="space/→ = flip, then OK · ← or 1 = not OK · 3 = OK · 0 = almost never repeat · z = undo">⌨</span>
+        <span class="iconbtn" style="cursor:help" title="space/→ = flip, then OK · ← or 1 = not OK · 3 = OK · ↓ or 0 = know it, park it · z = undo">⌨</span>
       </span>
     </div>
     <div class="pbar"><div style="width:${pct}%"></div></div>
@@ -676,7 +676,7 @@ function viewSession() {
     ${session.flipped ? `
       <div class="gradebar">
         <button class="fail" data-grade="fail" title="← or 1">✕ Not OK</button>
-        ${(!state || state.due === 0) ? `<button data-grade="never" title="I already know this — park it (~6 months, then yearly)">💤 Know it</button>` : ""}
+        ${(!state || state.due === 0) ? `<button data-grade="never" title="↓ — I already know this; park it (~6 months, then yearly)">💤 Know it</button>` : ""}
         <button class="ok" data-grade="ok" title="space, → or 3">✓ OK</button>
       </div>` : ""}`;
 
@@ -1579,10 +1579,10 @@ window.addEventListener("hashchange", render);
 document.addEventListener("keydown", (e) => {
   if (currentView() !== "session" || !session) return;
   if (e.target instanceof Element && e.target.matches("input,textarea,select")) return;
-  const flipKeys = [" ", "ArrowRight", "ArrowLeft"];
+  const flipKeys = [" ", "ArrowRight", "ArrowLeft", "ArrowDown"];
   if (flipKeys.includes(e.key)) e.preventDefault();
   if (!session.flipped) {
-    // forsiden: space og begge piler snur — så →→ = OK og →← = ikke OK
+    // forsiden: space og pilene snur — så →→ = OK, →← = ikke OK, →↓ = kan det
     if (flipKeys.includes(e.key)) flipCard();
     else if (e.key === "z") undoLast();
     return;
@@ -1591,6 +1591,7 @@ document.addEventListener("keydown", (e) => {
   const guarded = Date.now() < (session.flipGuardUntil || 0);
   if ((e.key === " " || e.key === "ArrowRight") && !guarded) gradeCard("ok");
   else if (e.key === "ArrowLeft" && !guarded) gradeCard("fail");
+  else if (e.key === "ArrowDown" && !guarded) gradeCard("never"); // kan det — parkér
   else if (e.key === "3") gradeCard("ok");
   else if (e.key === "1") gradeCard("fail");
   else if (e.key === "0" || e.key === "x") gradeCard("never");

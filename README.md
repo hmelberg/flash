@@ -2,7 +2,8 @@
 
 Fleksibel flashcard-app med spaced repetition. Statisk, ingen byggetrinn — eneste server-del er en valgfri, tilstandsløs Netlify-funksjon for OAuth-innlogging. Motoren er generisk; alt innhold ligger i JSON-tema-filer i `decks/`.
 
-**Innebygde tema:** Russisk for nybegynnere (94 kort) · Sannsynlighet og statistikk (80 kort).
+**Innebygde demo-tema (engelsk):** Spanish essentials · World capitals · Math essentials.
+(`decks/russian.json` og `decks/probability.json` ligger fortsatt i repoet og kan hentes via «Add deck from URL»: `decks/russian.json`.)
 
 ## Kjøre
 
@@ -12,7 +13,7 @@ Fleksibel flashcard-app med spaced repetition. Statisk, ingen byggetrinn — ene
 
 ## Bruk
 
-- **Økt:** mellomrom/klikk/piler snur kortet; deretter <kbd>mellomrom</kbd>/<kbd>→</kbd>/<kbd>3</kbd> = OK, <kbd>←</kbd>/<kbd>1</kbd> = ikke OK, <kbd>0</kbd> = nesten aldri gjenta, <kbd>z</kbd> = angre. Rask flyt: space-space per kort du kan (→→ / →← med pilene).
+- **Økt:** mellomrom/klikk/piler snur kortet; deretter <kbd>mellomrom</kbd>/<kbd>→</kbd>/<kbd>3</kbd> = OK, <kbd>←</kbd>/<kbd>1</kbd> = ikke OK, <kbd>↓</kbd>/<kbd>0</kbd> = kan det, parkér, <kbd>z</kbd> = angre. Rask flyt: space-space per kort du kan (→→ / →← med pilene).
 - Svartid brukes automatisk: trege OK-svar får forsiktigere intervaller, raske får litt ekstra.
 - Nye kort kommer fra tidligste uferdige leksjon (anbefalt rekkefølge). **Fri flyt er standard**: alle leksjoner er åpne, og øktoppsummeringen tilbyr alltid «＋N more new cards» forbi dagsgrensen. Foretrekker du gradvis opplåsing (~80 % mestring åpner neste leksjon), velg «Guided» under Settings → Lesson flow.
 - Kan du noe fra før? «💤 Know it» på nye kort parkerer dem (~6 mnd, så årlig sjekk); i «Browse» kan hele leksjoner parkeres («✔ know this») eller unntas fra ny-kort-flyten («⏭ skip»).

@@ -1,0 +1,59 @@
+{
+  "id": "world-capitals",
+  "title": "World capitals",
+  "language": { "front": "en", "back": "en" },
+  "explainContext": "Geography: countries and their capital cities.",
+  "settings": { "tts": false },
+  "lessons": [
+    {
+      "id": "l01-europe",
+      "title": "Europe",
+      "intro": "## How this deck works\n\nThe front shows a **country** — name its **capital**. Reversed cards show the capital and ask for the country, so you learn the pair in both directions.\n\nWatch out for the classic traps: the capital is not always the biggest or most famous city (Türkiye → Ankara, not Istanbul; Canada → Ottawa, not Toronto; Brazil → Brasília, not Rio).",
+      "cards": [
+        { "id": "france", "front": "France", "back": "Paris", "reverse": true },
+        { "id": "spain", "front": "Spain", "back": "Madrid", "reverse": true },
+        { "id": "italy", "front": "Italy", "back": "Rome", "reverse": true },
+        { "id": "germany", "front": "Germany", "back": "Berlin", "reverse": true },
+        { "id": "norway", "front": "Norway", "back": "Oslo", "reverse": true },
+        { "id": "sweden", "front": "Sweden", "back": "Stockholm", "reverse": true },
+        { "id": "poland", "front": "Poland", "back": "Warsaw", "reverse": true },
+        { "id": "netherlands", "front": "The Netherlands", "back": "Amsterdam", "reverse": true,
+          "hint": "The government sits in The Hague, but the constitutional capital is …" },
+        { "id": "greece", "front": "Greece", "back": "Athens", "reverse": true },
+        { "id": "portugal", "front": "Portugal", "back": "Lisbon", "reverse": true }
+      ]
+    },
+    {
+      "id": "l02-asia",
+      "title": "Asia",
+      "cards": [
+        { "id": "japan", "front": "Japan", "back": "Tokyo", "reverse": true },
+        { "id": "china", "front": "China", "back": "Beijing", "reverse": true },
+        { "id": "india", "front": "India", "back": "New Delhi", "reverse": true },
+        { "id": "south-korea", "front": "South Korea", "back": "Seoul", "reverse": true },
+        { "id": "thailand", "front": "Thailand", "back": "Bangkok", "reverse": true },
+        { "id": "vietnam", "front": "Vietnam", "back": "Hanoi", "reverse": true,
+          "hint": "Not the biggest city (that's Ho Chi Minh City)." },
+        { "id": "indonesia", "front": "Indonesia", "back": "Jakarta", "reverse": true },
+        { "id": "turkiye", "front": "Türkiye (Turkey)", "back": "Ankara", "reverse": true,
+          "hint": "Not Istanbul." }
+      ]
+    },
+    {
+      "id": "l03-americas",
+      "title": "The Americas",
+      "cards": [
+        { "id": "usa", "front": "United States", "back": "Washington, D.C.", "reverse": true },
+        { "id": "canada", "front": "Canada", "back": "Ottawa", "reverse": true,
+          "hint": "Not Toronto." },
+        { "id": "mexico", "front": "Mexico", "back": "Mexico City", "reverse": true },
+        { "id": "brazil", "front": "Brazil", "back": "Brasília", "reverse": true,
+          "hint": "A planned city, built in the 1950s — not Rio." },
+        { "id": "argentina", "front": "Argentina", "back": "Buenos Aires", "reverse": true },
+        { "id": "chile", "front": "Chile", "back": "Santiago", "reverse": true },
+        { "id": "peru", "front": "Peru", "back": "Lima", "reverse": true },
+        { "id": "colombia", "front": "Colombia", "back": "Bogotá", "reverse": true }
+      ]
+    }
+  ]
+}

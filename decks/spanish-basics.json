@@ -1,0 +1,71 @@
+{
+  "id": "spanish-basics",
+  "title": "Spanish essentials",
+  "language": { "front": "es", "back": "en" },
+  "explainContext": "Beginner Spanish vocabulary and phrases for English speakers.",
+  "settings": { "tts": true },
+  "lessons": [
+    {
+      "id": "l01-greetings",
+      "title": "Greetings & politeness",
+      "intro": "## How greetings work in Spanish\n\nSpanish greetings follow the time of day: **buenos días** until midday, **buenas tardes** through the afternoon and early evening, **buenas noches** after dark (both as a greeting and a farewell).\n\nNote the pattern: *buenos/buenas* agrees with the noun — **días** is masculine (buen**os**), **tardes** and **noches** are feminine (buen**as**).\n\n**Hola** works any time, and politeness words (**por favor**, **gracias**, **de nada**) are used far more freely than their English counterparts — sprinkle them generously.",
+      "cards": [
+        { "id": "hola", "front": "hola", "back": "hello", "tts": "hola", "reverse": true,
+          "example": { "text": "¡Hola! ¿Qué tal?", "translation": "Hello! How's it going?" } },
+        { "id": "buenos-dias", "front": "buenos días", "back": "good morning", "tts": "buenos días", "reverse": true,
+          "example": { "text": "Buenos días, señora.", "translation": "Good morning, ma'am." } },
+        { "id": "buenas-tardes", "front": "buenas tardes", "back": "good afternoon", "tts": "buenas tardes", "reverse": true,
+          "example": { "text": "Buenas tardes a todos.", "translation": "Good afternoon, everyone." } },
+        { "id": "buenas-noches", "front": "buenas noches", "back": "good evening / good night", "tts": "buenas noches", "reverse": true,
+          "example": { "text": "Buenas noches, hasta mañana.", "translation": "Good night, see you tomorrow." } },
+        { "id": "adios", "front": "adiós", "back": "goodbye", "tts": "adiós", "reverse": true,
+          "example": { "text": "Adiós, nos vemos pronto.", "translation": "Goodbye, see you soon." } },
+        { "id": "por-favor", "front": "por favor", "back": "please", "tts": "por favor", "reverse": true,
+          "example": { "text": "Un café, por favor.", "translation": "A coffee, please." } },
+        { "id": "gracias", "front": "gracias", "back": "thank you", "tts": "gracias", "reverse": true,
+          "example": { "text": "Muchas gracias por tu ayuda.", "translation": "Thank you very much for your help." } },
+        { "id": "de-nada", "front": "de nada", "back": "you're welcome", "tts": "de nada", "reverse": true,
+          "example": { "text": "—Gracias. —De nada.", "translation": "—Thanks. —You're welcome." } }
+      ]
+    },
+    {
+      "id": "l02-numbers",
+      "title": "Numbers 1–10",
+      "note": "The foundation for prices, times and quantities.",
+      "cards": [
+        { "id": "uno", "front": "uno", "back": "one (1)", "tts": "uno", "reverse": true },
+        { "id": "dos", "front": "dos", "back": "two (2)", "tts": "dos", "reverse": true },
+        { "id": "tres", "front": "tres", "back": "three (3)", "tts": "tres", "reverse": true },
+        { "id": "cuatro", "front": "cuatro", "back": "four (4)", "tts": "cuatro", "reverse": true },
+        { "id": "cinco", "front": "cinco", "back": "five (5)", "tts": "cinco", "reverse": true },
+        { "id": "seis", "front": "seis", "back": "six (6)", "tts": "seis", "reverse": true },
+        { "id": "siete", "front": "siete", "back": "seven (7)", "tts": "siete", "reverse": true },
+        { "id": "ocho", "front": "ocho", "back": "eight (8)", "tts": "ocho", "reverse": true },
+        { "id": "nueve", "front": "nueve", "back": "nine (9)", "tts": "nueve", "reverse": true },
+        { "id": "diez", "front": "diez", "back": "ten (10)", "tts": "diez", "reverse": true,
+          "example": { "text": "Son diez euros.", "translation": "That's ten euros." } }
+      ]
+    },
+    {
+      "id": "l03-phrases",
+      "title": "Survival phrases",
+      "intro": "## Phrases as chunks\n\nDon't analyse these word by word yet — learn them as **whole chunks** you can say without thinking. Fluency starts with a stock of ready-made phrases; the grammar behind them comes later.\n\nTwo symbols to know: Spanish questions open with **¿** and exclamations with **¡** — they tell you the intonation *before* you start reading.",
+      "cards": [
+        { "id": "como-estas", "front": "¿Cómo estás?", "back": "How are you?", "tts": "¿Cómo estás?", "reverse": true,
+          "example": { "text": "¡Hola, María! ¿Cómo estás?", "translation": "Hi, María! How are you?" } },
+        { "id": "me-llamo", "front": "Me llamo …", "back": "My name is …", "tts": "Me llamo", "reverse": true,
+          "example": { "text": "Me llamo Ana, ¿y tú?", "translation": "My name is Ana, and you?" } },
+        { "id": "mucho-gusto", "front": "mucho gusto", "back": "nice to meet you", "tts": "mucho gusto", "reverse": true },
+        { "id": "donde-esta", "front": "¿Dónde está …?", "back": "Where is …?", "tts": "¿Dónde está?", "reverse": true,
+          "example": { "text": "¿Dónde está la estación?", "translation": "Where is the station?" } },
+        { "id": "no-entiendo", "front": "no entiendo", "back": "I don't understand", "tts": "no entiendo", "reverse": true,
+          "example": { "text": "Perdón, no entiendo. ¿Puede repetir?", "translation": "Sorry, I don't understand. Can you repeat?" } },
+        { "id": "cuanto-cuesta", "front": "¿Cuánto cuesta?", "back": "How much does it cost?", "tts": "¿Cuánto cuesta?", "reverse": true,
+          "example": { "text": "¿Cuánto cuesta este libro?", "translation": "How much does this book cost?" } },
+        { "id": "lo-siento", "front": "lo siento", "back": "I'm sorry", "tts": "lo siento", "reverse": true },
+        { "id": "hasta-luego", "front": "hasta luego", "back": "see you later", "tts": "hasta luego", "reverse": true,
+          "example": { "text": "Me voy. ¡Hasta luego!", "translation": "I'm off. See you later!" } }
+      ]
+    }
+  ]
+}
