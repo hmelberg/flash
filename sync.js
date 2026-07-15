@@ -2,7 +2,7 @@
 
 export const SYNCED_SETTINGS = [
   "newPerDay", "autoRead", "readQuestion", "readExample",
-  "model", "apiKey", "aiProvider", "aiBaseUrl",
+  "model", "apiKey", "aiProvider", "aiBaseUrl", "autoSync",
 ];
 
 // Fremgang: per kort vinner høyest lastReview; notater: lokal vinner;
