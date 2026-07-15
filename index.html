@@ -760,10 +760,17 @@ function viewBrowse() {
         <td>${st?.suspended ? `<button class="small" data-wake="${esc(key)}">wake</button>` : ""}
             ${st && isLeech(st) && aiAvailable() ? `<button class="small" data-rewrite="${esc(key)}">✨ rewrite</button>` : ""}</td></tr>`;
     }).join("");
+    const allSuspended = refs.length > 0 && refs.every(r =>
+      progress[progressKey(deck.id, r.c.id, r.rev)]?.suspended);
+    const isSkipped = (settings.skipped || []).includes(`${deck.id}/${l.id}`);
     return `<div class="lesson"><h3>${open.has(l.id) ? "🔓" : "🔒"} ${esc(l.title)}
         <span class="muted small">(${learned}/${refs.length} learned)</span>
         <button class="iconbtn" data-practice="${esc(l.id)}" title="Practice this lesson now">▶</button>
-        ${!open.has(l.id) ? `<button class="small" data-unlock="${esc(l.id)}">unlock</button>` : ""}</h3>
+        ${!open.has(l.id) ? `<button class="small" data-unlock="${esc(l.id)}">unlock</button>` : ""}
+        ${allSuspended
+          ? `<button class="small" data-wakelesson="${esc(l.id)}" title="Bring the cards back into rotation">wake lesson</button>`
+          : `<button class="small" data-know="${esc(l.id)}" title="Park all cards (~6 months, then a yearly check)">✔ know this</button>`}
+        <button class="small" data-skip="${esc(l.id)}" title="No new cards from this lesson — reviews still shown">${isSkipped ? "⏭ skipped ✓" : "⏭ skip"}</button></h3>
       ${l.note ? `<p class="muted small">${esc(l.note)}</p>` : ""}
       <table class="cardlist">${rows}</table></div>`;
   }).join("");
@@ -782,6 +789,38 @@ function viewBrowse() {
     render();
   });
   app.querySelectorAll("[data-rewrite]").forEach(b => b.onclick = () => rewriteDialog(deck, b.dataset.rewrite));
+  app.querySelectorAll("[data-know]").forEach(b => b.onclick = () => {
+    const l = deck.lessons.find(x => x.id === b.dataset.know);
+    const now = Date.now();
+    store.patch(s => {
+      for (const c of l.cards) for (const rev of c.reverse ? [false, true] : [false]) {
+        const key = progressKey(deck.id, c.id, rev);
+        const st = s.progress[key] || newCardState();
+        st.suspended = "never"; st.due = now + 180 * DAY;
+        s.progress[key] = st;
+      }
+    });
+    render();
+  });
+  app.querySelectorAll("[data-wakelesson]").forEach(b => b.onclick = () => {
+    const l = deck.lessons.find(x => x.id === b.dataset.wakelesson);
+    store.patch(s => {
+      for (const c of l.cards) for (const rev of c.reverse ? [false, true] : [false]) {
+        const st = s.progress[progressKey(deck.id, c.id, rev)];
+        if (st?.suspended) { st.suspended = false; st.due = Date.now(); st.lapses = 0; }
+      }
+    });
+    render();
+  });
+  app.querySelectorAll("[data-skip]").forEach(b => b.onclick = () => {
+    const key = `${deck.id}/${b.dataset.skip}`;
+    store.patch(s => {
+      const i = s.settings.skipped.indexOf(key);
+      i >= 0 ? s.settings.skipped.splice(i, 1) : s.settings.skipped.push(key);
+      s.meta.settingsUpdatedAt = Date.now();
+    });
+    render();
+  });
   const g = $("#genbtn"); if (g) g.onclick = () => generateDialog(deck.id);
   $("#rmdeck").onclick = () => {
     if (!confirm(`Remove "${deck.title}"? Your progress is kept.`)) return;
