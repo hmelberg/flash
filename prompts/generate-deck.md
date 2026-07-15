@@ -15,6 +15,7 @@ each card is one atomic fact.
       "id": "short-kebab-slug",
       "title": "Lesson title (in the learner's language)",
       "note": "Optional 1-2 sentence intro shown with the lesson, or null",
+      "intro": "Optional lesson page in markdown (see below), or null",
       "cards": [
         {
           "id": "unique-kebab-slug",
@@ -39,6 +40,17 @@ each card is one atomic fact.
 - Split cards into lessons of **8–14 cards**, ordered so each lesson builds on
   the previous ones (cumulative: basics first, later lessons may assume earlier content).
 - Lesson `id` and card `id` are short kebab-case slugs, unique within the output.
+
+## Lesson intro pages (`intro`)
+
+- `intro` is an optional **markdown page** (~100–250 words, `$math$` and tables allowed)
+  shown once before the lesson's first card. Use it to present the lesson's content
+  **as a system** — the grammar rule, the pattern, the notation, the context — the way
+  a textbook page would, instead of one element at a time.
+- Write an intro when the lesson has an underlying rule or structure worth seeing whole
+  (a conjugation pattern, a theorem and its intuition, a dialogue's setting). Set it to
+  null when the cards speak for themselves (plain vocabulary lists).
+- Do not restate the cards — give the framework that makes them make sense.
 
 ## Card quality rules
 

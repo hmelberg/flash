@@ -14,7 +14,8 @@ Fleksibel flashcard-app med spaced repetition. Statisk, ingen byggetrinn — ene
 
 - **Økt:** mellomrom/klikk/piler snur kortet; deretter <kbd>mellomrom</kbd>/<kbd>→</kbd>/<kbd>3</kbd> = OK, <kbd>←</kbd>/<kbd>1</kbd> = ikke OK, <kbd>0</kbd> = nesten aldri gjenta, <kbd>z</kbd> = angre. Rask flyt: space-space per kort du kan (→→ / →← med pilene).
 - Svartid brukes automatisk: trege OK-svar får forsiktigere intervaller, raske får litt ekstra.
-- Nye kort kommer fra tidligste uferdige leksjon (kumulativ oppbygging); neste leksjon åpner ved ~80 % mestring, men kan alltid låses opp manuelt under «Bla».
+- Nye kort kommer fra tidligste uferdige leksjon (anbefalt rekkefølge). **Fri flyt er standard**: alle leksjoner er åpne, og øktoppsummeringen tilbyr alltid «＋N more new cards» forbi dagsgrensen. Foretrekker du gradvis opplåsing (~80 % mestring åpner neste leksjon), velg «Guided» under Settings → Lesson flow.
+- Kan du noe fra før? «💤 Know it» på nye kort parkerer dem (~6 mnd, så årlig sjekk); i «Browse» kan hele leksjoner parkeres («✔ know this») eller unntas fra ny-kort-flyten («⏭ skip»).
 - Kort som feiler ≥8 ganger flagges som *leech* — omskriv eller suspender dem.
 - Statistikk-fanen viser retensjonsrate på modne kort: 80–95 % er sunt.
 
@@ -30,7 +31,8 @@ Fleksibel flashcard-app med spaced repetition. Statisk, ingen byggetrinn — ene
   "lessons": [
     {
       "id": "l01", "title": "Første leksjon",
-      "note": "Valgfri intro",
+      "note": "Valgfri én-linjes beskrivelse",
+      "intro": "Valgfri leksjonsside i **markdown** med $matte$ — vises før leksjonens første kort (📖 i «Browse»)",
       "cards": [
         {
           "id": "unik-id",

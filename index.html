@@ -1324,9 +1324,10 @@ const GEN_SCHEMA = {
           id: { type: "string" },
           title: { type: "string" },
           note: { anyOf: [{ type: "string" }, { type: "null" }] },
+          intro: { anyOf: [{ type: "string" }, { type: "null" }] },
           cards: { type: "array", items: GEN_CARD },
         },
-        required: ["id", "title", "note", "cards"],
+        required: ["id", "title", "note", "intro", "cards"],
         additionalProperties: false,
       },
     },
@@ -1530,6 +1531,7 @@ function saveGenerated(genLessons, dlg, topic) {
         lessonIds.add(lid);
         const lesson = { id: lid, title: gl.title, cards: cleanCards(gl.cards) };
         if (gl.note) lesson.note = gl.note;
+        if (gl.intro) lesson.intro = gl.intro;
         deck.lessons.push(lesson);
       }
     }
