@@ -198,6 +198,7 @@ function validateDeck(d) {
   d.lessons.forEach((l, li) => {
     if (!l.id) fail(`lesson ${li + 1} is missing 'id'`);
     if (!Array.isArray(l.cards)) fail(`lesson '${l.id}' is missing 'cards'`);
+    if (l.intro != null && typeof l.intro !== "string") fail(`lesson '${l.id}': 'intro' must be a string`);
     l.cards.forEach((c, ci) => {
       if (!c.id) fail(`lesson '${l.id}', card ${ci + 1}: missing 'id'`);
       if (seen.has(c.id)) fail(`duplicate card id '${c.id}'`);
@@ -619,6 +620,21 @@ function viewSession() {
   const ref = currentRef();
   if (!ref) return viewSummary();
 
+  // leksjonsside: vis introen før øktens første NYE kort fra leksjonen
+  const introLesson = session.deck.lessons.find(l => l.id === ref.lessonId);
+  const refState0 = store.get().progress[progressKey(ref.deckId, ref.cardId, ref.rev)];
+  session.introShown ??= new Set();
+  if (introLesson?.intro && (!refState0 || refState0.due === 0) && !session.introShown.has(introLesson.id)) {
+    app.innerHTML = `<div class="smeta"><span class="deckname">${esc(session.deck.title)}</span></div>
+      <div class="cardwrap"><div class="card" style="cursor:default;text-align:left">
+        <h2 style="margin-top:0">📖 ${esc(introLesson.title)}</h2><div id="introbody" class="mdbox"></div>
+      </div></div>
+      <p style="text-align:center"><button class="primary" id="introgo">Continue to the cards →</button></p>`;
+    mdRender($("#introbody"), introLesson.intro);
+    $("#introgo").onclick = () => { session.introShown.add(introLesson.id); render(); };
+    return;
+  }
+
   const { card } = ref;
   const state = store.get().progress[progressKey(ref.deckId, ref.cardId, ref.rev)];
   const frontVal = ref.rev ? card.back : card.front;
@@ -770,8 +786,10 @@ function viewBrowse() {
         ${allSuspended
           ? `<button class="small" data-wakelesson="${esc(l.id)}" title="Bring the cards back into rotation">wake lesson</button>`
           : `<button class="small" data-know="${esc(l.id)}" title="Park all cards (~6 months, then a yearly check)">✔ know this</button>`}
-        <button class="small" data-skip="${esc(l.id)}" title="No new cards from this lesson — reviews still shown">${isSkipped ? "⏭ skipped ✓" : "⏭ skip"}</button></h3>
+        <button class="small" data-skip="${esc(l.id)}" title="No new cards from this lesson — reviews still shown">${isSkipped ? "⏭ skipped ✓" : "⏭ skip"}</button>
+        ${l.intro ? `<button class="iconbtn" data-intro="${esc(l.id)}" title="Read the lesson intro">📖</button>` : ""}</h3>
       ${l.note ? `<p class="muted small">${esc(l.note)}</p>` : ""}
+      ${l.intro ? `<div class="mdbox hidden" data-introbody="${esc(l.id)}" style="margin:.4rem 0 .8rem"></div>` : ""}
       <table class="cardlist">${rows}</table></div>`;
   }).join("");
 
@@ -789,6 +807,12 @@ function viewBrowse() {
     render();
   });
   app.querySelectorAll("[data-rewrite]").forEach(b => b.onclick = () => rewriteDialog(deck, b.dataset.rewrite));
+  app.querySelectorAll("[data-intro]").forEach(b => b.onclick = () => {
+    const body = app.querySelector(`[data-introbody="${CSS.escape(b.dataset.intro)}"]`);
+    if (body.classList.contains("hidden") && !body.innerHTML)
+      mdRender(body, deck.lessons.find(x => x.id === b.dataset.intro)?.intro || "");
+    body.classList.toggle("hidden");
+  });
   app.querySelectorAll("[data-know]").forEach(b => b.onclick = () => {
     const l = deck.lessons.find(x => x.id === b.dataset.know);
     const now = Date.now();
